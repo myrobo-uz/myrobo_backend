@@ -1,0 +1,35 @@
+from django.urls import path
+from .views import (
+    CourseListAPIView,
+    CourseDetailAPIView,
+    CourseTypeListCreateView,
+    GeneratePromoCodesView,
+    LessonDetailAPIView,
+    CompleteLessonAPIView,
+    PurchaseCourseAPIView,
+    PromoCodeStatsDetailView,
+    PromoCodeStatsListView,
+    UserSubscriptionsListAPIView,
+    UserCoursePurchasesListAPIView,
+    LessonTaskSubmitAPIView,
+    SubmissionListAPIView,
+    CoursePlanListAPIView,
+)
+
+urlpatterns = [
+    path("courses/course-types/", CourseTypeListCreateView.as_view(), name="course-type-list"),
+    path("courses/", CourseListAPIView.as_view(), name="course-list"),
+    path("courses/<slug:slug>/", CourseDetailAPIView.as_view(), name="course-detail"),
+    path("lessons/<slug:slug>/", LessonDetailAPIView.as_view(), name="lesson-detail"),
+    path("lessons/<slug:slug>/complete/", CompleteLessonAPIView.as_view(), name="lesson-complete"),
+    path("courses/<slug:slug>/purchase/", PurchaseCourseAPIView.as_view(), name="course-purchase"),
+    path("my/subscriptions/", UserSubscriptionsListAPIView.as_view(), name="my-subscriptions"),
+    path("my/purchases/", UserCoursePurchasesListAPIView.as_view(), name="my-purchases"),
+    path("course-plans/", CoursePlanListAPIView.as_view(), name="course-plan-list"),
+    path("lessons/<slug:lesson_slug>/tasks/", LessonTaskSubmitAPIView.as_view(), name="lesson-tasks"),
+    path("lessons/<slug:lesson_slug>/submit/", LessonTaskSubmitAPIView.as_view(), name="lesson-submit"),
+    path("lessons/<slug:lesson_slug>/submissions/", SubmissionListAPIView.as_view(), name="lesson-submissions"),
+    path("promo-codes/generate/", GeneratePromoCodesView.as_view(), name="promo-codes-generate"),
+    path("promo-codes/stats/", PromoCodeStatsListView.as_view(), name="promo-codes-stats-list"),
+    path("promo-codes/stats/<str:code>/", PromoCodeStatsDetailView.as_view(), name="promo-codes-stats-detail"),
+]

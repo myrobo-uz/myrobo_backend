@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Environment
+.env
+
+# Django
+*.log
+/static/
+/media/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
