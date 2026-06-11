@@ -1,6 +1,5 @@
 import base64
 import time
-import logging
 from decimal import Decimal
 
 from django.conf import settings
@@ -14,9 +13,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .models import PaymeTransaction
 from .services import payme_checkout_link
-
-logger = logging.getLogger(__name__)
-
 
 def _payme_result(_id, result: dict):
     return Response({"jsonrpc": "2.0", "result": result, "id": _id})
@@ -180,8 +176,6 @@ class PaymeWebhookAPIView(APIView):
             tx.payme_transaction_id = tx.payme_transaction_id or payme_tx_id
             tx.save(update_fields=["state", "perform_time", "payme_transaction_id", "updated_at"])
 
-        logger.info("payment completed: user=%s amount=%s", user.id, amount_som)
-
         return _payme_result(_id, {
             "transaction": str(tx.id),
             "perform_time": tx.perform_time,
@@ -215,8 +209,6 @@ class PaymeWebhookAPIView(APIView):
             tx.reason = reason
             tx.payme_transaction_id = tx.payme_transaction_id or payme_tx_id
             tx.save(update_fields=["state", "cancel_time", "reason", "payme_transaction_id", "updated_at"])
-
-        logger.info("payment cancelled: tx=%s reason=%s", tx.id, reason)
 
         return _payme_result(_id, {
             "transaction": str(tx.id),

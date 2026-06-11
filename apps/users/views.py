@@ -1,5 +1,4 @@
 import base64
-import logging
 
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -22,8 +21,6 @@ from .serializers import (
     VerifyCodeRequestSerializer,
 )
 from .utils import save_otp, verify_otp
-
-logger = logging.getLogger(__name__)
 
 
 def _user_payload(user, request=None):
@@ -167,8 +164,7 @@ class SaveTelegramDataView(APIView):
                 {"status": "success", "user_id": str(user.id), "message": "User data saved successfully"},
                 status=status.HTTP_201_CREATED,
             )
-        except Exception as exc:
-            logger.exception("save-telegram-data failed: %s", exc)
+        except Exception:
             return Response({"error": "Failed to save user data"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -208,8 +204,8 @@ class VerifyCodeAPIView(APIView):
             try:
                 img_data = base64.b64decode(avatar_b64)
                 user.avatar.save("profile.jpg", ContentFile(img_data), save=True)
-            except Exception as exc:
-                logger.warning("avatar save failed: %s", exc)
+            except Exception:
+                pass
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -277,7 +273,7 @@ class AllTelegramIdsView(APIView):
 
     def get(self, request):
         secret = settings.BOT_API_SECRET
-        if secret and request.headers.get("X-Bot-Secret") != secret:
+        if not secret or request.headers.get("X-Bot-Secret") != secret:
             return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
         ids = list(
             User.objects.filter(telegram_id__isnull=False).values_list("telegram_id", flat=True)

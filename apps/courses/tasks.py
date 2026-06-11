@@ -1,10 +1,6 @@
-import logging
-
 from celery import shared_task
-from django.db.models import Exists, OuterRef, Prefetch
+from django.db.models import Prefetch
 from django.utils import timezone
-
-logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
@@ -31,7 +27,6 @@ def expire_subscriptions_task(self):
 
     sub_ids = list(expired_subs.values_list("id", flat=True))
     total = len(sub_ids)
-    logger.info("expire_subscriptions: expired=%d", total)
 
     kicked_users = 0
     errors = 0
@@ -72,14 +67,12 @@ def expire_subscriptions_task(self):
                 kick_user_from_course_chats(telegram_id, telegram_links)
 
             kicked_users += 1
-        except Exception as exc:
+        except Exception:
             errors += 1
-            logger.error("subscription %s: %s", sub.id, exc)
 
     if sub_ids:
         UserSubscription.objects.filter(id__in=sub_ids).update(is_active=False)
 
-    logger.info("expire_subscriptions done: kicked=%d errors=%d", kicked_users, errors)
     return {"processed": total, "kicked": kicked_users, "errors": errors}
 
 
@@ -95,7 +88,6 @@ def send_course_invite_links_task(self, telegram_id: int, course_id: str):
         if telegram_links:
             send_invite_links_to_user(telegram_id, telegram_links)
     except Exception as exc:
-        logger.error("send_course_invite_links_task: %s", exc)
         raise self.retry(exc=exc)
 
 
@@ -116,5 +108,4 @@ def send_subscription_invite_links_task(self, telegram_id: int, plan_id: str):
         if all_links:
             send_invite_links_to_user(telegram_id, all_links)
     except Exception as exc:
-        logger.error("send_subscription_invite_links_task: %s", exc)
         raise self.retry(exc=exc)

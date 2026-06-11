@@ -72,6 +72,21 @@ class SubmitTestView(APIView):
             )
         test = get_object_or_404(LessonTest, lesson=lesson)
 
+        existing_passed = (
+            TestResult.objects.filter(user=request.user, test=test, is_passed=True)
+            .order_by("-created_at")
+            .first()
+        )
+        if existing_passed:
+            result_data = TestResultDetailSerializer(existing_passed).data
+            return Response(
+                {
+                    "detail": "Siz avval ushbu testdan o'tgansiz.",
+                    "result": result_data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
         serializer = SubmitTestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         submitted_answers = serializer.validated_data["answers"]
@@ -97,11 +112,9 @@ class SubmitTestView(APIView):
             question = question_map.get(qid)
             if question is None:
                 continue
-
             option_id = item.get("option_id")
             selected_option = None
             is_correct = False
-
             if option_id:
                 selected_option = TestOption.objects.filter(
                     id=option_id, question=question
@@ -116,7 +129,6 @@ class SubmitTestView(APIView):
                     unanswered += 1
             else:
                 unanswered += 1
-
             answer_objects.append(
                 TestAnswer(
                     question=question,
@@ -127,7 +139,6 @@ class SubmitTestView(APIView):
 
         score_percent = Decimal(correct) / Decimal(total) * 100 if total > 0 else Decimal(0)
         is_passed = score_percent >= test.pass_score
-
         result = TestResult.objects.create(
             user=request.user,
             test=test,
@@ -138,14 +149,12 @@ class SubmitTestView(APIView):
             score_percent=score_percent.quantize(Decimal("0.01")),
             is_passed=is_passed,
         )
-
         for ans in answer_objects:
             ans.result = result
         TestAnswer.objects.bulk_create(answer_objects)
 
         result_data = TestResultDetailSerializer(result).data
         return Response(result_data, status=status.HTTP_201_CREATED)
-
 
 @extend_schema(tags=["Lesson Test"], summary="Foydalanuvchining barcha test natijalari")
 class TestResultListView(ListAPIView):

@@ -1,11 +1,8 @@
-import logging
 import os
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-
-logger = logging.getLogger(__name__)
 
 BACKEND_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN_CONTACT", "")
 TELEGRAM_API = f"https://api.telegram.org/bot{BACKEND_BOT_TOKEN}"
@@ -22,17 +19,14 @@ _session.mount("https://", HTTPAdapter(max_retries=_retry, pool_connections=20, 
 
 def _bot_request(method: str, **kwargs):
     if not BACKEND_BOT_TOKEN:
-        logger.error("TELEGRAM_BOT_TOKEN_CONTACT not set")
         return None
     try:
         resp = _session.post(f"{TELEGRAM_API}/{method}", json=kwargs, timeout=10)
         data = resp.json()
         if not data.get("ok"):
-            logger.warning("telegram %s: %s", method, data.get("description"))
             return None
         return data.get("result")
-    except Exception as exc:
-        logger.error("telegram %s error: %s", method, exc)
+    except Exception:
         return None
 
 
@@ -77,7 +71,6 @@ def send_invite_links_to_user(telegram_id: int, course_telegram_links) -> bool:
             success_count += 1
 
     if success_count == 0:
-        logger.error("user %s: no invite links generated", telegram_id)
         return False
 
     lines.append("\n⚠️ <i>Havolalar bir martalik — faqat siz uchun.</i>")
@@ -102,7 +95,6 @@ def send_contact_to_group(chat_id: int | str, name: str, email: str, message: st
         f"💬 <b>Xabar:</b>\n{message}"
     )
     if image_bytes:
-        result = None
         try:
             resp = _session.post(
                 f"{TELEGRAM_API}/sendPhoto",
@@ -111,12 +103,9 @@ def send_contact_to_group(chat_id: int | str, name: str, email: str, message: st
                 timeout=15,
             )
             data = resp.json()
-            result = data.get("result") if data.get("ok") else None
-            if not data.get("ok"):
-                logger.warning("sendPhoto failed: %s", data.get("description"))
-        except Exception as exc:
-            logger.error("sendPhoto error: %s", exc)
-        return result is not None
+            return bool(data.get("ok") and data.get("result"))
+        except Exception:
+            return False
 
     result = _bot_request("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML")
     return result is not None
