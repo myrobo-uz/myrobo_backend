@@ -260,7 +260,6 @@ class ProfileView(APIView):
         return Response(payload)
 
     def patch(self, request):
-        from .serializers import UserDetailSerializer
         serializer = UserDetailSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
