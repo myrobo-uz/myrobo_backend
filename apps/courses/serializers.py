@@ -89,10 +89,25 @@ class LessonDetailSerializer(serializers.ModelSerializer):
         return progress.is_completed if progress else False
 
 class LessonShortSerializer(serializers.ModelSerializer):
+    is_finished = serializers.SerializerMethodField()
+
     class Meta:
         model = Lesson
-        fields = ["id", "title", "lesson_type", "slug", "order"]
+        fields = ["id", "title", "lesson_type", "slug", "order", "is_finished"]
 
+    def get_is_finished(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        progress = self._get_progress(obj)
+        return progress.is_completed if progress else False
+
+    def _get_progress(self, obj):
+        user = self.context["request"].user
+        for p in getattr(obj, "progress").all():
+            if p.user_id == user.id:
+                return p
+        return None
 
 class ModuleSerializer(serializers.ModelSerializer):
     lessons_count = serializers.IntegerField(source="lessons.count", read_only=True)
