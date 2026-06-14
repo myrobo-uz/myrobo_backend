@@ -140,11 +140,11 @@ def slugify_title(title):
 
 def lesson_sample_input_path(instance, filename):
     name = slugify_title(instance.title)
-    return f"courses/task_{name}/{filename}"
+    return f"course/task_{name}/{filename}"
 
 def lesson_sample_output_path(instance, filename):
     name = slugify_title(instance.title)
-    return f"courses/task_{name}/{filename}"
+    return f"course/task_{name}/{filename}"
 
 def testcase_input_upload_path(instance, filename):
     name = slugify_title(instance.task.title)

@@ -13,6 +13,7 @@ from .models import (
     TaskTestCase,
     UserCoursePurchase,
     UserSubscription,
+    LessonProgress
 )
 
 
@@ -58,14 +59,34 @@ class LessonTaskSerializer(serializers.ModelSerializer):
     def get_test_cases(self, obj):
         visible_test_cases = obj.test_cases.filter(is_hidden=False)
         return TaskTestCaseSerializer(visible_test_cases, many=True).data
-
 class LessonDetailSerializer(serializers.ModelSerializer):
     tasks = LessonTaskSerializer(many=True, read_only=True)
+    is_completed = serializers.SerializerMethodField()
 
     class Meta:
         model = Lesson
-        fields = ["title", "description", "lesson_type", "video_url", "slug", "tasks"]
+        fields = [
+            "title",
+            "description",
+            "lesson_type",
+            "video_url",
+            "slug",
+            "tasks",
+            "is_completed",
+        ]
 
+    def get_is_completed(self, obj):
+        request = self.context.get("request")
+
+        if not request or not request.user.is_authenticated:
+            return False
+
+        progress = LessonProgress.objects.filter(
+            user=request.user,
+            lesson=obj,
+        ).first()
+
+        return progress.is_completed if progress else False
 
 class LessonShortSerializer(serializers.ModelSerializer):
     class Meta:
