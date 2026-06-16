@@ -4,8 +4,10 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-BACKEND_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN_CONTACT", "")
+BACKEND_BOT_TOKEN_C = os.environ.get("TELEGRAM_BOT_TOKEN_CONTACT", "")
+BACKEND_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_API = f"https://api.telegram.org/bot{BACKEND_BOT_TOKEN}"
+TELEGRAM_API_C = f"https://api.telegram.org/bot{BACKEND_BOT_TOKEN_C}"
 
 _session = requests.Session()
 _retry = Retry(
@@ -97,7 +99,7 @@ def send_contact_to_group(chat_id: int | str, name: str, email: str, message: st
     if image_bytes:
         try:
             resp = _session.post(
-                f"{TELEGRAM_API}/sendPhoto",
+                f"{TELEGRAM_API_C}/sendPhoto",
                 data={"chat_id": chat_id, "caption": text, "parse_mode": "HTML"},
                 files={"photo": ("image.jpg", image_bytes, "image/jpeg")},
                 timeout=15,
