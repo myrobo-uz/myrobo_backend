@@ -147,7 +147,7 @@ class CompleteLessonAPIView(APIView):
     summary="Kurs yoki obuna sotib olish",
     request=PurchaseCourseRequestSerializer,
 )
-class PurchaseCourseAPIView(APIView):
+class   PurchaseCourseAPIView(APIView):
     authentication_classes = [CustomJWTAuthentication]
 
     @transaction.atomic

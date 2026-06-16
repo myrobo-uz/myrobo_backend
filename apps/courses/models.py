@@ -1,3 +1,4 @@
+from ckeditor_uploader.fields import RichTextUploadingField
 from django.db import models
 from django.utils import timezone
 
@@ -28,7 +29,7 @@ class Course(BaseModel, SlugMixin):
         related_name="courses",
     )
     title = models.CharField(max_length=256)
-    description = models.TextField()
+    description = RichTextUploadingField()
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     image = models.ImageField(upload_to="course/images")
     slug = models.SlugField(unique=True, blank=True)
@@ -99,7 +100,7 @@ class Lesson(BaseModel, SlugMixin):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="lessons")
     lesson_type = models.CharField(max_length=10, choices=LessonType.choices)
     title = models.CharField(max_length=256)
-    description = models.TextField(blank=True)
+    description = RichTextUploadingField(blank=True)
     video_url = models.CharField(max_length=500, blank=True, null=True)
     slug = models.SlugField(unique=True, blank=True)
     order = models.PositiveIntegerField(default=0)
