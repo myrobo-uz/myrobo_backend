@@ -200,7 +200,7 @@ SIMPLE_JWT = {
 }
 
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR.parent / "static"
+STATIC_ROOT = "/app/static"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = "/app/media"
 
