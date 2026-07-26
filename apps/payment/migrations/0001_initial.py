@@ -18,7 +18,6 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(primary_key=True, serialize=False)),
                 ('provider', models.CharField(choices=[('payme', 'Payme')], default='payme', max_length=20)),
-                ('purpose', models.CharField(choices=[('topup', "Balans to'ldirish"), ('donate', 'Donate')], db_index=True, default='topup', max_length=10)),
                 ('payme_transaction_id', models.CharField(blank=True, db_index=True, max_length=64, null=True, unique=True)),
                 ('amount_tiyin', models.PositiveBigIntegerField()),
                 ('state', models.SmallIntegerField(choices=[(1, 'Pending'), (2, 'Done'), (-1, 'Canceled')], db_index=True, default=1)),

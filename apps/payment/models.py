@@ -24,7 +24,9 @@ class PaymeTransaction(models.Model):
 
     id = models.BigAutoField(primary_key=True)
     provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES, default=PROVIDER_PAYME)
-    purpose = models.CharField(max_length=10, choices=PURPOSE_CHOICES, default=PURPOSE_TOPUP, db_index=True)
+    purpose = models.CharField(
+        max_length=10, choices=PURPOSE_CHOICES, default=PURPOSE_TOPUP, blank=True, db_index=True
+    )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="payme_transactions")
     payme_transaction_id = models.CharField(max_length=64, unique=True, null=True, blank=True, db_index=True)
     amount_tiyin = models.PositiveBigIntegerField()
