@@ -10,6 +10,9 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 
+from apps.analytics.models import LoginLog
+from apps.analytics.utils import get_client_ip
+
 from .models import User
 from .serializers import (
     BotGenerateCodeRequestSerializer,
@@ -206,6 +209,12 @@ class VerifyCodeAPIView(APIView):
                 user.avatar.save("profile.jpg", ContentFile(img_data), save=True)
             except Exception:
                 pass
+
+        LoginLog.objects.create(
+            user=user,
+            ip=get_client_ip(request),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+        )
 
         refresh = RefreshToken.for_user(user)
         return Response({

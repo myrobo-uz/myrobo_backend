@@ -8,11 +8,12 @@ class PaymeTransactionAdmin(admin.ModelAdmin):
         "id",
         "user",
         "amount_som",
+        "purpose",
         "get_state_display",
         "payme_transaction_id",
         "created_at",
     ]
-    list_filter = ["state", "created_at", "provider"]
+    list_filter = ["purpose", "state", "created_at", "provider"]
     search_fields = ["id", "user__phone", "payme_transaction_id"]
     readonly_fields = [
         "id",
@@ -26,7 +27,7 @@ class PaymeTransactionAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Transaction Info", {
-            "fields": ("id", "user", "provider", "payme_transaction_id")
+            "fields": ("id", "user", "provider", "purpose", "payme_transaction_id")
         }),
         ("Amount", {
             "fields": ("amount_tiyin",)

@@ -264,11 +264,12 @@ class AdminTransactionSerializer(serializers.ModelSerializer):
     user_telegram_id = serializers.IntegerField(source="user.telegram_id", read_only=True)
     amount_som = serializers.SerializerMethodField()
     state_display = serializers.CharField(source="get_state_display", read_only=True)
+    purpose_display = serializers.CharField(source="get_purpose_display", read_only=True)
 
     class Meta:
         model = PaymeTransaction
         fields = [
-            "id", "provider", "user", "user_name", "user_telegram_id",
+            "id", "provider", "purpose", "purpose_display", "user", "user_name", "user_telegram_id",
             "payme_transaction_id", "amount_tiyin", "amount_som",
             "state", "state_display",
             "create_time", "perform_time", "cancel_time",

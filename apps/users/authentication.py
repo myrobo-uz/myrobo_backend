@@ -2,6 +2,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.settings import api_settings
 
+from apps.analytics.presence import touch_online
 from apps.users.models import User
 
 
@@ -12,6 +13,8 @@ class CustomJWTAuthentication(JWTAuthentication):
         except KeyError:
             raise AuthenticationFailed("Token contains no user id")
         try:
-            return User.objects.get(id=user_id)
+            user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             raise AuthenticationFailed("User not found")
+        touch_online(user.id)
+        return user

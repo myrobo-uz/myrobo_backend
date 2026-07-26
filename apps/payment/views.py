@@ -166,10 +166,11 @@ class PaymeWebhookAPIView(APIView):
             if tx.state == PaymeTransaction.STATE_CANCELED:
                 return _payme_error(_id, -31008, "Отменено.", "Bekor qilingan")
 
-            user = tx.user
-            amount_som = Decimal(tx.amount_tiyin) / Decimal("100")
-            user.balance = (user.balance or Decimal("0")) + amount_som
-            user.save(update_fields=["balance"])
+            if tx.purpose == PaymeTransaction.PURPOSE_TOPUP:
+                user = tx.user
+                amount_som = Decimal(tx.amount_tiyin) / Decimal("100")
+                user.balance = (user.balance or Decimal("0")) + amount_som
+                user.save(update_fields=["balance"])
 
             tx.state = PaymeTransaction.STATE_DONE
             tx.perform_time = perform_time
@@ -249,6 +250,39 @@ class PaymeCheckoutLinkAPIView(APIView):
         })
 
 
+class PaymeDonateCheckoutAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        amount_som = int(request.data.get("amount", 0))
+
+        if amount_som <= 0:
+            return Response({"detail": "Noto'g'ri summa"}, status=400)
+
+        amount_tiyin = amount_som * 100
+
+        tx = PaymeTransaction.objects.create(
+            user=request.user,
+            amount_tiyin=amount_tiyin,
+            purpose=PaymeTransaction.PURPOSE_DONATE,
+            state=PaymeTransaction.STATE_PENDING,
+            create_time=0,
+        )
+
+        checkout_url = payme_checkout_link(
+            order_id=tx.id,
+            amount_tiyin=amount_tiyin,
+            lang="uz",
+        )
+
+        return Response({
+            "order_id": tx.id,
+            "payment_url": checkout_url,
+            "amount_som": amount_som,
+            "status": "pending",
+        })
+
+
 class PaymeTransactionHistoryAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -256,9 +290,13 @@ class PaymeTransactionHistoryAPIView(APIView):
         transactions = (
             PaymeTransaction.objects
             .filter(user=request.user)
-            .values("id", "amount_tiyin", "state", "created_at", "payme_transaction_id")
+            .values("id", "amount_tiyin", "purpose", "state", "created_at", "payme_transaction_id")
             .order_by("-created_at")
         )
+
+        purpose = request.query_params.get("purpose")
+        if purpose:
+            transactions = transactions.filter(purpose=purpose)
 
         data = [
             {

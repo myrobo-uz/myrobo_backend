@@ -513,6 +513,9 @@ class AdminTransactionViewSet(AdminReadOnlyViewSet):
         state = self.request.query_params.get("state")
         if state is not None:
             qs = qs.filter(state=state)
+        purpose = self.request.query_params.get("purpose")
+        if purpose is not None:
+            qs = qs.filter(purpose=purpose)
         user_id = self.request.query_params.get("user_id")
         if user_id:
             qs = qs.filter(user_id=user_id)

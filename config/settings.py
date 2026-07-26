@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "apps.payment",
     "apps.lessontest",
     "apps.admin_panel",
+    "apps.analytics",
 ]
 
 MIDDLEWARE = [
