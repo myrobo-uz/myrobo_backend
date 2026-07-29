@@ -8,9 +8,6 @@ from .models import (
     LessonTask,
     CoursePlan,
     Company,
-    LessonTest,
-    TestQuestion,
-    TestOption,
 )
 
 
@@ -48,17 +45,3 @@ class CoursePlanTranslationOptions(TranslationOptions):
 class CompanyTranslationOptions(TranslationOptions):
     fields = ("name", "description")
 
-
-@register(LessonTest)
-class LessonTestTranslationOptions(TranslationOptions):
-    fields = ("title", "description")
-
-
-@register(TestQuestion)
-class TestQuestionTranslationOptions(TranslationOptions):
-    fields = ("text",)
-
-
-@register(TestOption)
-class TestOptionTranslationOptions(TranslationOptions):
-    fields = ("text",)
