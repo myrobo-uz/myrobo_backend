@@ -1,0 +1,95 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: myrobo_backend\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-29 00:00+0000\n"
+"PO-Revision-Date: 2026-07-29 00:00+0000\n"
+"Last-Translator: Auto Generated <dev@local>\n"
+"Language-Team: Russian\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# Model verbose names and fields
+msgid "Ism"
+msgstr "Имя"
+
+msgid "Xabar"
+msgstr "Сообщение"
+
+msgid "Murojaat"
+msgstr "Обращение"
+
+msgid "Korxona nomi"
+msgstr "Название компании"
+
+msgid "Tavsif"
+msgstr "Описание"
+
+# Choice labels
+msgid "Kanal"
+msgstr "Канал"
+
+msgid "Gruppa"
+msgstr "Группа"
+
+# Validation / response messages
+msgid "Comment juda qisqa"
+msgstr "Комментарий слишком короткий"
+
+msgid "Xabar juda qisqa"
+msgstr "Сообщение слишком короткое"
+
+msgid "Murojaatingiz qabul qilindi"
+msgstr "Ваше сообщение получено"
+
+msgid "Promo kod yaroqsiz"
+msgstr "Промокод недействителен"
+
+msgid "Noto'g'ri summa"
+msgstr "Неверная сумма"
+
+msgid "telegram_id noto'g'ri"
+msgstr "telegram_id неверный"
+
+msgid "Noto'g'ri parametr"
+msgstr "Неверные параметры"
+
+msgid "Noto'g'ri plan"
+msgstr "Неверный план"
+
+msgid "Promo kod topilmadi"
+msgstr "Промокод не найден"
+
+msgid "number 1 dan {_PROMO_MAX_NUMBER} gacha butun son bo\'lishi kerak"
+msgstr "число должно быть целым от 1 до {_PROMO_MAX_NUMBER}"
+
+# Telegram messages
+msgid "🎓 <b>Kurs guruhlariga qo'shilish havolalari:</b>\n"
+msgstr "🎓 <b>Ссылки для присоединения к группам курса:</b>\n"
+
+msgid "📌 <b>{tg_link.title}</b>\n🔗 {invite_link}"
+msgstr "📌 <b>{tg_link.title}</b>\n🔗 {invite_link}"
+
+msgid "\n⚠️ <i>Havolalar bir martalik — faqat siz uchun.</i>"
+msgstr "\n⚠️ <i>Ссылки одноразовые — только для вас.</i>"
+
+msgid "📩 <b>Yangi murojaat</b>\n\n"
+msgstr "📩 <b>Новое обращение</b>\n\n"
+
+msgid "👤 <b>Ism:</b> {name}\n"
+msgstr "👤 <b>Имя:</b> {name}\n"
+
+msgid "📧 <b>Email:</b> {email}\n"
+msgstr "📧 <b>Эл. почта:</b> {email}\n"
+
+msgid "💬 <b>Xabar:</b>\n{message}"
+msgstr "💬 <b>Сообщение:</b>\n{message}"
+
+# Misc
+msgid "Promo kodlar generatsiya (faqat admin)"
+msgstr "Генерация промокодов (только админ)"
+
+msgid "Ogohlantirish {new_v}/{self.MAX_VIOLATIONS}: so'rovlar juda tez kelmoqda."
+msgstr "Предупреждение {new_v}/{self.MAX_VIOLATIONS}: запросы поступают слишком быстро."

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "drf_spectacular",
     "drf_spectacular_sidecar",
+    "modeltranslation",
     "apps.core",
     "apps.users",
     "apps.courses",
@@ -51,9 +52,11 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
+    "apps.core.middleware.QueryLanguageMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -213,6 +216,20 @@ LANGUAGE_CODE = os.environ.get("DJANGO_LANGUAGE_CODE", "uz")
 TIME_ZONE = os.environ.get("DJANGO_TIME_ZONE", "Asia/Tashkent")
 USE_I18N = True
 USE_TZ = True
+
+# Supported languages for the project
+LANGUAGES = [
+    ("en", "English"),
+    ("ru", "Русский"),
+    ("uz", "O'zbek"),
+]
+
+# Path for gettext locale files
+LOCALE_PATHS = [BASE_DIR / "locale"]
+
+# django-modeltranslation settings
+MODELTRANSLATION_DEFAULT_LANGUAGE = os.environ.get("DJANGO_LANGUAGE_CODE", "uz")
+MODELTRANSLATION_LANGUAGES = ("uz", "en", "ru")
 
 CKEDITOR_UPLOAD_PATH = "uploads/"
 CKEDITOR_IMAGE_BACKEND = "pillow"
