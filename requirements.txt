@@ -39,4 +39,5 @@ asgiref==3.11.1
 openpyxl==3.1.5
 
 # i18n helpers
-django-modeltranslation>=0.24.0
+# pin to a released version available on PyPI
+django-modeltranslation==0.20.3
