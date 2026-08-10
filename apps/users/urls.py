@@ -1,4 +1,5 @@
 from django.urls import path
+from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
     AllTelegramIdsView,
@@ -18,4 +19,5 @@ urlpatterns = [
     path("get-user-data/", GetUserDataView.as_view()),
     path("profile/", ProfileView.as_view()),
     path("all-telegram-ids/", AllTelegramIdsView.as_view()),
+    path("token/refresh/", TokenRefreshView.as_view()),
 ]
