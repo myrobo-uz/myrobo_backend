@@ -1,6 +1,6 @@
 from django.conf import settings
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import serializers, status
@@ -21,7 +21,7 @@ class ContactSerializer(serializers.ModelSerializer):
 
 
 class ContactView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
