@@ -10,6 +10,11 @@ from .views import (
     SaveTelegramDataView,
     VerifyCodeAPIView,
 )
+from .serializers import UserTokenRefreshSerializer
+
+
+class UserTokenRefreshView(TokenRefreshView):
+    serializer_class = UserTokenRefreshSerializer
 
 urlpatterns = [
     path("login/", VerifyCodeAPIView.as_view()),
@@ -19,5 +24,5 @@ urlpatterns = [
     path("get-user-data/", GetUserDataView.as_view()),
     path("profile/", ProfileView.as_view()),
     path("all-telegram-ids/", AllTelegramIdsView.as_view()),
-    path("token/refresh/", TokenRefreshView.as_view()),
+    path("token/refresh/", UserTokenRefreshView.as_view()),
 ]

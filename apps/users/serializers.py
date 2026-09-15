@@ -1,4 +1,7 @@
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.settings import api_settings
 
 from apps.users.models import User
 
@@ -80,6 +83,36 @@ class LoginResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField()
     user = UserResponseSerializer()
+
+
+class UserTokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        refresh = self.token_class(attrs["refresh"])
+        user_id = refresh.payload.get(api_settings.USER_ID_CLAIM)
+
+        if not user_id:
+            raise AuthenticationFailed("Token contains no user id")
+
+        try:
+            User.objects.get(**{api_settings.USER_ID_FIELD: user_id})
+        except (User.DoesNotExist, ValueError, TypeError) as exc:
+            raise AuthenticationFailed("User not found") from exc
+
+        data = {"access": str(refresh.access_token)}
+
+        if api_settings.ROTATE_REFRESH_TOKENS:
+            if api_settings.BLACKLIST_AFTER_ROTATION:
+                try:
+                    refresh.blacklist()
+                except AttributeError:
+                    pass
+
+            refresh.set_jti()
+            refresh.set_exp()
+            refresh.set_iat()
+            data["refresh"] = str(refresh)
+
+        return data
 
 
 class CodeResponseSerializer(serializers.Serializer):

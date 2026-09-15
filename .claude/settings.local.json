@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip show *)",
+      "Bash(python3 -c \"import django_redis; print\\(django_redis.__file__\\)\")",
+      "Read(//home/developer/Desktop/projects/web/backend/**)",
+      "Bash(find / -maxdepth 4 -iname \"docker-compose*.yml\")",
+      "Bash(pip list *)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -m py_compile apps/analytics/apps.py apps/analytics/models.py apps/analytics/admin.py apps/analytics/presence.py apps/analytics/utils.py apps/analytics/serializers.py apps/analytics/views.py apps/analytics/urls.py apps/payment/models.py apps/payment/views.py apps/payment/urls.py apps/payment/admin.py apps/admin_panel/serializers.py apps/admin_panel/views.py apps/users/authentication.py apps/users/views.py config/settings.py config/urls.py)",
+      "Bash(python3 -m venv /tmp/claude-1000/-home-developer-Desktop-projects-web-backend-myrobo-backend/246037d5-6333-417e-abfa-9c769a15100f/scratchpad/venv)",
+      "Bash(/tmp/claude-1000/-home-developer-Desktop-projects-web-backend-myrobo-backend/246037d5-6333-417e-abfa-9c769a15100f/scratchpad/venv/bin/pip install *)",
+      "Bash(export DJANGO_SECRET_KEY=test-secret)",
+      "Bash(export POSTGRES_DB=test)",
+      "Bash(export POSTGRES_USER=test)",
+      "Bash(export POSTGRES_PASSWORD=test)",
+      "Bash(export DJANGO_DEBUG=True)",
+      "Bash(/tmp/claude-1000/-home-developer-Desktop-projects-web-backend-myrobo-backend/246037d5-6333-417e-abfa-9c769a15100f/scratchpad/venv/bin/python -c ' *)",
+      "Bash(git status *)",
+      "Bash(git check-ignore *)",
+      "Bash(git log *)",
+      "Bash(python manage.py check)",
+      "Bash(python3 -m py_compile apps/users/urls.py)",
+      "Bash(python3 *)"
+    ]
+  }
+}
