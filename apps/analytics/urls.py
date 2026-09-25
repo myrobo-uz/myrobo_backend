@@ -9,6 +9,8 @@ from .views import (
     LoginsStatsView,
     OnlineUsersView,
     RegistrationsStatsView,
+    UserActivityListView,
+    UserActivitySummaryView,
 )
 
 app_name = "analytics"
@@ -22,4 +24,6 @@ urlpatterns = [
     path("courses/progress-overview/", CourseProgressOverviewView.as_view(), name="courses-progress-overview"),
     path("courses/<uuid:course_id>/students/", CourseProgressDetailView.as_view(), name="course-students"),
     path("online/", OnlineUsersView.as_view(), name="online"),
+    path("activities/", UserActivityListView.as_view(), name="activities"),
+    path("users/<uuid:user_id>/activity-summary/", UserActivitySummaryView.as_view(), name="user-activity-summary"),
 ]

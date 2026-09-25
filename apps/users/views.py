@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 
+from apps.analytics.activity import ActivityType, log_activity
 from apps.analytics.models import LoginLog
 from apps.analytics.utils import get_client_ip
 
@@ -215,6 +216,12 @@ class VerifyCodeAPIView(APIView):
             ip=get_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT", ""),
         )
+        log_activity(
+            user,
+            ActivityType.LOGIN,
+            request=request,
+            description="signup" if created else "login",
+        )
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -272,6 +279,7 @@ class ProfileView(APIView):
         serializer = UserDetailSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        log_activity(request.user, ActivityType.PROFILE_UPDATE, request=request)
         return Response(serializer.data)
 
 

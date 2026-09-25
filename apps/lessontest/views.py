@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.analytics.activity import ActivityType, log_activity
 from apps.courses.models import Lesson
 from apps.users.authentication import CustomJWTAuthentication
 
@@ -152,6 +153,12 @@ class SubmitTestView(APIView):
         for ans in answer_objects:
             ans.result = result
         TestAnswer.objects.bulk_create(answer_objects)
+
+        log_activity(
+            request.user, ActivityType.TEST_SUBMIT, request=request,
+            description=test.title, target=test,
+            meta={"score_percent": float(result.score_percent), "is_passed": is_passed},
+        )
 
         result_data = TestResultDetailSerializer(result).data
         return Response(result_data, status=status.HTTP_201_CREATED)

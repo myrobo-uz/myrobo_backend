@@ -16,7 +16,7 @@ from apps.payment.models import PaymeTransaction
 from apps.users.authentication import CustomJWTAuthentication
 from apps.users.models import User
 
-from .models import LoginLog
+from .models import ActivityType, LoginLog, UserActivity
 from .presence import get_online_count, get_online_user_ids
 from .serializers import (
     CourseProgressOverviewSerializer,
@@ -25,6 +25,8 @@ from .serializers import (
     OnlineUserSerializer,
     PeriodCountSerializer,
     PeriodDonationSerializer,
+    UserActivitySerializer,
+    UserActivitySummarySerializer,
 )
 from .utils import apply_period_trunc, course_progress_for_users
 
@@ -283,3 +285,72 @@ class OnlineUsersView(AnalyticsBaseView):
         users = list(User.objects.filter(id__in=online_ids).values("id", "full_name", "phone_number"))
         serializer = OnlineUserSerializer(users, many=True)
         return Response({"count": len(online_ids), "users": serializer.data})
+
+
+@extend_schema(
+    tags=["Admin: Analytics"],
+    summary="Foydalanuvchilar faoliyati jurnali (action log)",
+    parameters=[
+        OpenApiParameter("user_id", str, required=False, description="Faqat shu foydalanuvchi"),
+        OpenApiParameter(
+            "action", str, required=False,
+            description="login | course_view | lesson_view | lesson_complete | "
+                        "course_purchase | task_submit | test_submit | article_view | profile_update",
+        ),
+        DATE_FROM_PARAM,
+        DATE_TO_PARAM,
+    ],
+    responses={200: UserActivitySerializer(many=True)},
+)
+class UserActivityListView(generics.ListAPIView):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAdminUser]
+    serializer_class = UserActivitySerializer
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        qs = UserActivity.objects.select_related("user").all()
+        qs = _apply_date_range(qs, self.request)
+        user_id = self.request.query_params.get("user_id")
+        action = self.request.query_params.get("action")
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        if action:
+            qs = qs.filter(action=action)
+        return qs
+
+
+@extend_schema(
+    tags=["Admin: Analytics"],
+    summary="Bitta foydalanuvchi faoliyati bo'yicha xulosa",
+)
+class UserActivitySummaryView(AnalyticsBaseView):
+    def get(self, request, user_id):
+        user = get_object_or_404(User, id=user_id)
+        activities = UserActivity.objects.filter(user=user)
+
+        action_counts = dict(
+            activities.values("action").annotate(count=Count("id")).values_list("action", "count")
+        )
+        last_login = (
+            activities.filter(action=ActivityType.LOGIN)
+            .order_by("-created_at")
+            .values_list("created_at", flat=True)
+            .first()
+        )
+        last_seen = activities.order_by("-created_at").values_list("created_at", flat=True).first()
+        online_ids = get_online_user_ids()
+
+        data = {
+            "user_id": user.id,
+            "full_name": user.full_name,
+            "phone_number": user.phone_number,
+            "is_online": str(user.id) in online_ids,
+            "login_count": action_counts.get(ActivityType.LOGIN, 0),
+            "last_login": last_login,
+            "last_seen": last_seen,
+            "total_activities": sum(action_counts.values()),
+            "action_counts": action_counts,
+        }
+        serializer = UserActivitySummarySerializer(data)
+        return Response(serializer.data)

@@ -19,6 +19,7 @@ from drf_spectacular.utils import extend_schema
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 
+from apps.analytics.activity import ActivityType, log_activity
 from apps.users.models import User
 from apps.users.authentication import CustomJWTAuthentication
 
@@ -109,6 +110,12 @@ class CourseDetailAPIView(RetrieveAPIView):
         data["progress"] = get_course_progress(request.user, course) if request.user.is_authenticated else 0
         data["is_subscribed"] = is_subscribed
 
+        if request.user.is_authenticated:
+            log_activity(
+                request.user, ActivityType.COURSE_VIEW, request=request,
+                description=course.title, target=course,
+            )
+
         return Response(data)
 
 
@@ -121,6 +128,10 @@ class LessonDetailAPIView(RetrieveAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         lesson = self.get_object()
+        log_activity(
+            request.user, ActivityType.LESSON_VIEW, request=request,
+            description=lesson.title, target=lesson,
+        )
         return Response(self.get_serializer(lesson).data)
 
 
@@ -139,6 +150,10 @@ class CompleteLessonAPIView(APIView):
         obj.is_completed = True
         obj.completed_at = timezone.now()
         obj.save(update_fields=["is_completed", "completed_at", "updated_at"])
+        log_activity(
+            request.user, ActivityType.LESSON_COMPLETE, request=request,
+            description=lesson.title, target=lesson,
+        )
         return Response({"status": "completed", "lesson": lesson.slug})
 
 
@@ -204,6 +219,12 @@ class   PurchaseCourseAPIView(APIView):
                     )
                 )
 
+            log_activity(
+                user, ActivityType.COURSE_PURCHASE, request=request,
+                description=course.title, target=course,
+                meta={"purchase_type": "individual_course", "paid": float(price)},
+            )
+
             return Response({
                 "status": "success",
                 "purchase_type": "individual_course",
@@ -264,6 +285,12 @@ class   PurchaseCourseAPIView(APIView):
                     telegram_id=user.telegram_id, plan_id=str(plan.id)
                 )
             )
+
+        log_activity(
+            user, ActivityType.COURSE_PURCHASE, request=request,
+            description=plan.title, target=plan,
+            meta={"purchase_type": "subscription", "paid": float(price), "course": course.slug},
+        )
 
         return Response({
             "status": "success",
@@ -353,6 +380,12 @@ class LessonTaskSubmitAPIView(APIView):
 
         submission.result = compilator_result
         submission.save(update_fields=["status", "result"])
+
+        log_activity(
+            request.user, ActivityType.TASK_SUBMIT, request=request,
+            description=task.title, target=task,
+            meta={"language": language, "status": submission.status},
+        )
 
         return Response(
             {

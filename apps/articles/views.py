@@ -7,6 +7,7 @@ from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from drf_spectacular.utils import extend_schema
 
+from apps.analytics.activity import ActivityType, log_activity
 from apps.core.pagination import StandardPagination
 
 from .models import ArticleType, Articles
@@ -64,6 +65,11 @@ class ArticleDetailAPIView(RetrieveAPIView):
     def retrieve(self, request, *args, **kwargs):
         article = self.get_object()
         self._increment_views(article, request)
+        if request.user.is_authenticated:
+            log_activity(
+                request.user, ActivityType.ARTICLE_VIEW, request=request,
+                description=article.title, target=article,
+            )
         return Response(self.get_serializer(article).data)
 
 
