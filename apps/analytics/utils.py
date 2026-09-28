@@ -8,9 +8,17 @@ PERIOD_TRUNC = {
 
 
 def get_client_ip(request) -> str | None:
+    """Ishonchli IP manzilni requestdan aniqlaydi (reverse proxy/Nginx ortida ham).
+
+    Klient yuborgan har qanday ip_address maydoniga ishonilmaydi — faqat
+    server ko'rgan header/ulanish ma'lumotlaridan foydalaniladi.
+    """
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
     if forwarded:
         return forwarded.split(",")[0].strip()
+    real_ip = request.META.get("HTTP_X_REAL_IP")
+    if real_ip:
+        return real_ip.strip()
     return request.META.get("REMOTE_ADDR")
 
 

@@ -26,6 +26,7 @@ urlpatterns = [
     path("lessontest/", include("apps.lessontest.urls")),
     path("api/admin/", include("apps.admin_panel.urls")),
     path("api/admin/analytics/", include("apps.analytics.urls")),
+    path("api/analytics/", include("apps.analytics.public_urls")),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

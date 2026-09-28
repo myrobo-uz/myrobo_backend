@@ -182,6 +182,13 @@ SPECTACULAR_SETTINGS = {
         {"name": "Courses", "description": "Kurslar, modullar, darslar va sotib olish"},
         {"name": "Teachers", "description": "O'qituvchilar ro'yxati va tafsilotlari"},
         {"name": "Payment", "description": "Payme to'lov tizimi integratsiyasi"},
+        {
+            "name": "Analytics: Tracking",
+            "description": (
+                "Login qilgan va anonim (login qilmagan) foydalanuvchilar uchun "
+                "action va page-exit tracking API — authentication talab qilmaydi"
+            ),
+        },
     ],
     "SECURITY": [{"BearerAuth": []}],
 }

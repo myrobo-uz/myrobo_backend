@@ -2,12 +2,16 @@ from django.urls import path
 
 from .views import (
     AnalyticsOverviewView,
+    ActionsStatsView,
     CourseProgressDetailView,
     CourseProgressOverviewView,
     DonationsListView,
     DonationsStatsView,
+    ExitReasonStatsView,
     LoginsStatsView,
     OnlineUsersView,
+    PageExitListView,
+    PageStatsView,
     RegistrationsStatsView,
     UserActivityListView,
     UserActivitySummaryView,
@@ -25,5 +29,9 @@ urlpatterns = [
     path("courses/<uuid:course_id>/students/", CourseProgressDetailView.as_view(), name="course-students"),
     path("online/", OnlineUsersView.as_view(), name="online"),
     path("activities/", UserActivityListView.as_view(), name="activities"),
+    path("actions-stats/", ActionsStatsView.as_view(), name="actions-stats"),
     path("users/<uuid:user_id>/activity-summary/", UserActivitySummaryView.as_view(), name="user-activity-summary"),
+    path("page-exits/", PageExitListView.as_view(), name="page-exits"),
+    path("pages/stats/", PageStatsView.as_view(), name="pages-stats"),
+    path("pages/exit-reasons/", ExitReasonStatsView.as_view(), name="pages-exit-reasons"),
 ]

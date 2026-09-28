@@ -1,11 +1,12 @@
 from collections import defaultdict
 
-from django.db.models import Count, Sum
+from django.db.models import Avg, Count, Sum
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from rest_framework import generics
+from rest_framework import generics, status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -16,13 +17,18 @@ from apps.payment.models import PaymeTransaction
 from apps.users.authentication import CustomJWTAuthentication
 from apps.users.models import User
 
-from .models import ActivityType, LoginLog, UserActivity
+from .models import ActivityType, LoginLog, PageExit, UserActivity
 from .presence import get_online_count, get_online_user_ids
 from .serializers import (
+    ActionCreateSerializer,
     CourseProgressOverviewSerializer,
     CourseStudentProgressSerializer,
     DonationSerializer,
+    ExitReasonStatsSerializer,
     OnlineUserSerializer,
+    PageExitCreateSerializer,
+    PageExitSerializer,
+    PageStatsSerializer,
     PeriodCountSerializer,
     PeriodDonationSerializer,
     UserActivitySerializer,
@@ -74,11 +80,24 @@ class AnalyticsOverviewView(AnalyticsBaseView):
             total=Sum("amount_tiyin"), count=Count("id")
         )
 
+        anonymous_visitors_total = (
+            UserActivity.objects.filter(user__isnull=True)
+            .exclude(anonymous_id="")
+            .values("anonymous_id").distinct().count()
+        )
+        anonymous_visitors_today = (
+            UserActivity.objects.filter(user__isnull=True, created_at__date=today)
+            .exclude(anonymous_id="")
+            .values("anonymous_id").distinct().count()
+        )
+
         return Response({
             "total_users": total_users,
             "new_users_today": new_users_today,
             "logins_today": logins_today,
             "online_now": get_online_count(),
+            "anonymous_visitors_today": anonymous_visitors_today,
+            "anonymous_visitors_total": anonymous_visitors_total,
             "total_courses": Course.objects.count(),
             "total_purchases": UserCoursePurchase.objects.count(),
             "donations_today": {
@@ -292,9 +311,12 @@ class OnlineUsersView(AnalyticsBaseView):
     summary="Foydalanuvchilar faoliyati jurnali (action log)",
     parameters=[
         OpenApiParameter("user_id", str, required=False, description="Faqat shu foydalanuvchi"),
+        OpenApiParameter("anonymous_id", str, required=False, description="Faqat shu anonim tashrifchi"),
+        OpenApiParameter("ip", str, required=False, description="IP manzil bo'yicha texnik tahlil"),
+        OpenApiParameter("page", str, required=False, description="Sahifa bo'yicha filtr"),
         OpenApiParameter(
             "action", str, required=False,
-            description="login | course_view | lesson_view | lesson_complete | "
+            description="login | page_view | course_view | lesson_view | lesson_complete | "
                         "course_purchase | task_submit | test_submit | article_view | profile_update",
         ),
         DATE_FROM_PARAM,
@@ -312,9 +334,18 @@ class UserActivityListView(generics.ListAPIView):
         qs = UserActivity.objects.select_related("user").all()
         qs = _apply_date_range(qs, self.request)
         user_id = self.request.query_params.get("user_id")
+        anonymous_id = self.request.query_params.get("anonymous_id")
+        ip = self.request.query_params.get("ip")
+        page = self.request.query_params.get("page")
         action = self.request.query_params.get("action")
         if user_id:
             qs = qs.filter(user_id=user_id)
+        if anonymous_id:
+            qs = qs.filter(anonymous_id=anonymous_id)
+        if ip:
+            qs = qs.filter(ip=ip)
+        if page:
+            qs = qs.filter(page=page)
         if action:
             qs = qs.filter(action=action)
         return qs
@@ -354,3 +385,162 @@ class UserActivitySummaryView(AnalyticsBaseView):
         }
         serializer = UserActivitySummarySerializer(data)
         return Response(serializer.data)
+
+
+@extend_schema(
+    tags=["Admin: Analytics"],
+    summary="Sahifa-tark etish (page-exit) jurnali",
+    parameters=[
+        OpenApiParameter("user_id", str, required=False),
+        OpenApiParameter("anonymous_id", str, required=False),
+        OpenApiParameter("page", str, required=False),
+        OpenApiParameter("exit_reason", str, required=False),
+        DATE_FROM_PARAM,
+        DATE_TO_PARAM,
+    ],
+    responses={200: PageExitSerializer(many=True)},
+)
+class PageExitListView(generics.ListAPIView):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAdminUser]
+    serializer_class = PageExitSerializer
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        qs = PageExit.objects.select_related("user").all()
+        qs = _apply_date_range(qs, self.request)
+        user_id = self.request.query_params.get("user_id")
+        anonymous_id = self.request.query_params.get("anonymous_id")
+        page = self.request.query_params.get("page")
+        exit_reason = self.request.query_params.get("exit_reason")
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        if anonymous_id:
+            qs = qs.filter(anonymous_id=anonymous_id)
+        if page:
+            qs = qs.filter(page=page)
+        if exit_reason:
+            qs = qs.filter(exit_reason=exit_reason)
+        return qs
+
+
+@extend_schema(
+    tags=["Admin: Analytics"],
+    summary="Sahifalar bo'yicha statistika: ko'rishlar, chiqishlar, o'rtacha vaqt",
+    parameters=[DATE_FROM_PARAM, DATE_TO_PARAM],
+    responses={200: PageStatsSerializer(many=True)},
+)
+class PageStatsView(AnalyticsBaseView):
+    def get(self, request):
+        views_qs = _apply_date_range(UserActivity.objects.exclude(page=""), request)
+        views_by_page = dict(
+            views_qs.values("page").annotate(count=Count("id")).values_list("page", "count")
+        )
+
+        exits_qs = _apply_date_range(PageExit.objects.all(), request)
+        exit_by_page = {
+            row["page"]: row
+            for row in exits_qs.values("page").annotate(
+                exits=Count("id"), avg_time_spent=Avg("time_spent")
+            )
+        }
+
+        pages = set(views_by_page) | set(exit_by_page)
+        data = []
+        for page in pages:
+            exit_info = exit_by_page.get(page, {"exits": 0, "avg_time_spent": 0})
+            data.append({
+                "page": page,
+                "views": views_by_page.get(page, 0),
+                "exits": exit_info["exits"],
+                "avg_time_spent": round(exit_info["avg_time_spent"] or 0, 1),
+            })
+        data.sort(key=lambda d: d["views"], reverse=True)
+
+        serializer = PageStatsSerializer(data, many=True)
+        return Response(serializer.data)
+
+
+@extend_schema(
+    tags=["Admin: Analytics"],
+    summary="Chiqib ketish sabablari bo'yicha statistika",
+    parameters=[
+        OpenApiParameter("page", str, required=False, description="Faqat shu sahifa bo'yicha"),
+        DATE_FROM_PARAM,
+        DATE_TO_PARAM,
+    ],
+    responses={200: ExitReasonStatsSerializer(many=True)},
+)
+class ExitReasonStatsView(AnalyticsBaseView):
+    def get(self, request):
+        qs = _apply_date_range(PageExit.objects.all(), request)
+        page = request.query_params.get("page")
+        if page:
+            qs = qs.filter(page=page)
+        grouped = qs.values("exit_reason").annotate(count=Count("id")).order_by("-count")
+        data = [{"exit_reason": row["exit_reason"], "count": row["count"]} for row in grouped]
+        serializer = ExitReasonStatsSerializer(data, many=True)
+        return Response(serializer.data)
+
+
+@extend_schema(
+    tags=["Admin: Analytics"],
+    summary="Kunlik/oylik/yillik action (amal) statistikasi",
+    parameters=[
+        PERIOD_PARAM, DATE_FROM_PARAM, DATE_TO_PARAM,
+        OpenApiParameter("action", str, required=False, description="Faqat shu action turi"),
+    ],
+    responses={200: PeriodCountSerializer(many=True)},
+)
+class ActionsStatsView(AnalyticsBaseView):
+    def get(self, request):
+        period = _get_period(request)
+        qs = _apply_date_range(UserActivity.objects.all(), request)
+        action = request.query_params.get("action")
+        if action:
+            qs = qs.filter(action=action)
+        grouped = apply_period_trunc(qs, period, "created_at").annotate(count=Count("id"))
+        data = [{"period": row["period"], "count": row["count"]} for row in grouped]
+        return Response(data)
+
+
+@extend_schema(
+    tags=["Analytics: Tracking"],
+    summary="Foydalanuvchi (yoki anonim tashrifchi) amalini yozish",
+    description=(
+        "Login qilgan foydalanuvchi uchun `request.user` orqali aniqlanadi. "
+        "Login qilmagan (anonim) foydalanuvchi uchun `anonymous_id` majburiy. "
+        "IP manzil va vaqt backend tomonidan avtomatik aniqlanadi."
+    ),
+    request=ActionCreateSerializer,
+    responses={201: UserActivitySerializer},
+)
+class ActionCreateView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ActionCreateSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        activity = serializer.save()
+        return Response(UserActivitySerializer(activity).data, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(
+    tags=["Analytics: Tracking"],
+    summary="Sahifadan chiqib ketish (page-exit) hodisasini yozish",
+    description=(
+        "Frontend foydalanuvchi sahifadan chiqayotganda yoki boshqa sahifaga "
+        "o'tayotganda yuboradi. Login qilmagan foydalanuvchi uchun `anonymous_id` "
+        "majburiy. IP manzil va vaqt backend tomonidan avtomatik aniqlanadi."
+    ),
+    request=PageExitCreateSerializer,
+    responses={201: PageExitSerializer},
+)
+class PageExitCreateView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PageExitCreateSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        page_exit = serializer.save()
+        return Response(PageExitSerializer(page_exit).data, status=status.HTTP_201_CREATED)
