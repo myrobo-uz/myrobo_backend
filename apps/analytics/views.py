@@ -313,7 +313,11 @@ class OnlineUsersView(AnalyticsBaseView):
         OpenApiParameter("user_id", str, required=False, description="Faqat shu foydalanuvchi"),
         OpenApiParameter("anonymous_id", str, required=False, description="Faqat shu anonim tashrifchi"),
         OpenApiParameter("ip", str, required=False, description="IP manzil bo'yicha texnik tahlil"),
-        OpenApiParameter("page", str, required=False, description="Sahifa bo'yicha filtr"),
+        OpenApiParameter(
+            "page_name", str, required=False,
+            description="Sahifa bo'yicha filtr (masalan: courses, course_detail). "
+                        "DRF pagination'ning `page` (sahifa raqami) parametri bilan chalkashmasin.",
+        ),
         OpenApiParameter(
             "action", str, required=False,
             description="login | page_view | course_view | lesson_view | lesson_complete | "
@@ -336,7 +340,7 @@ class UserActivityListView(generics.ListAPIView):
         user_id = self.request.query_params.get("user_id")
         anonymous_id = self.request.query_params.get("anonymous_id")
         ip = self.request.query_params.get("ip")
-        page = self.request.query_params.get("page")
+        page_name = self.request.query_params.get("page_name")
         action = self.request.query_params.get("action")
         if user_id:
             qs = qs.filter(user_id=user_id)
@@ -344,8 +348,8 @@ class UserActivityListView(generics.ListAPIView):
             qs = qs.filter(anonymous_id=anonymous_id)
         if ip:
             qs = qs.filter(ip=ip)
-        if page:
-            qs = qs.filter(page=page)
+        if page_name:
+            qs = qs.filter(page=page_name)
         if action:
             qs = qs.filter(action=action)
         return qs
@@ -393,7 +397,10 @@ class UserActivitySummaryView(AnalyticsBaseView):
     parameters=[
         OpenApiParameter("user_id", str, required=False),
         OpenApiParameter("anonymous_id", str, required=False),
-        OpenApiParameter("page", str, required=False),
+        OpenApiParameter(
+            "page_name", str, required=False,
+            description="Sahifa bo'yicha filtr. DRF pagination'ning `page` parametri bilan chalkashmasin.",
+        ),
         OpenApiParameter("exit_reason", str, required=False),
         DATE_FROM_PARAM,
         DATE_TO_PARAM,
@@ -411,14 +418,14 @@ class PageExitListView(generics.ListAPIView):
         qs = _apply_date_range(qs, self.request)
         user_id = self.request.query_params.get("user_id")
         anonymous_id = self.request.query_params.get("anonymous_id")
-        page = self.request.query_params.get("page")
+        page_name = self.request.query_params.get("page_name")
         exit_reason = self.request.query_params.get("exit_reason")
         if user_id:
             qs = qs.filter(user_id=user_id)
         if anonymous_id:
             qs = qs.filter(anonymous_id=anonymous_id)
-        if page:
-            qs = qs.filter(page=page)
+        if page_name:
+            qs = qs.filter(page=page_name)
         if exit_reason:
             qs = qs.filter(exit_reason=exit_reason)
         return qs
@@ -465,7 +472,7 @@ class PageStatsView(AnalyticsBaseView):
     tags=["Admin: Analytics"],
     summary="Chiqib ketish sabablari bo'yicha statistika",
     parameters=[
-        OpenApiParameter("page", str, required=False, description="Faqat shu sahifa bo'yicha"),
+        OpenApiParameter("page_name", str, required=False, description="Faqat shu sahifa bo'yicha"),
         DATE_FROM_PARAM,
         DATE_TO_PARAM,
     ],
@@ -474,9 +481,9 @@ class PageStatsView(AnalyticsBaseView):
 class ExitReasonStatsView(AnalyticsBaseView):
     def get(self, request):
         qs = _apply_date_range(PageExit.objects.all(), request)
-        page = request.query_params.get("page")
-        if page:
-            qs = qs.filter(page=page)
+        page_name = request.query_params.get("page_name")
+        if page_name:
+            qs = qs.filter(page=page_name)
         grouped = qs.values("exit_reason").annotate(count=Count("id")).order_by("-count")
         data = [{"exit_reason": row["exit_reason"], "count": row["count"]} for row in grouped]
         serializer = ExitReasonStatsSerializer(data, many=True)

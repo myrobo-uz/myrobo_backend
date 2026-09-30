@@ -1,0 +1,174 @@
+{
+  "info": {
+    "_postman_id": "d58ab89b-8378-44e2-8171-35f10d186203",
+    "name": "MyRobo — Analytics Tracking (Public)",
+    "description": "MyRobo backend'ining login talab qilmaydigan action/page-exit tracking API'lari — login qilgan va anonim (login qilmagan) foydalanuvchilarning saytdagi harakatlarini yozib borish uchun.\n\n**Endpointlar**:\n- `POST /api/analytics/action/` — foydalanuvchi harakati (masalan: kurs ko'rish)\n- `POST /api/analytics/page-exit/` — sahifadan chiqish hodisasi (qancha vaqt o'tkazgani va nima sababdan chiqib ketgani)\n\n**Autentifikatsiya**: ixtiyoriy. Agar `access_token` (Bearer) yuborilsa, foydalanuvchi shu orqali aniqlanadi va `anonymous_id` shart emas. Token yuborilmasa (yoki noto'g'ri bo'lsa), `anonymous_id` maydoni majburiy bo'ladi.\n\n`{{base_url}}` ni muhitingizga moslang (masalan `http://localhost:8000`). Login qilgan holatni sinash uchun `access_token` collection o'zgaruvchisiga haqiqiy JWT access tokenni qo'yib qo'ying (masalan asosiy kolleksiyadagi `Auth (Users) → OTP kodni tekshirish va login` orqali olingan).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Action yuborish (login qilgan user)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/analytics/action/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "analytics",
+            "action"
+          ]
+        },
+        "description": "Login qilgan foydalanuvchi uchun action yozadi. `request.user` Authorization headeridagi Bearer token orqali avtomatik aniqlanadi — `anonymous_id` yubormaslik kerak.\n\nJavobda yaratilgan UserActivity yozuvi qaytadi (`user` to'ldirilgan, `anonymous_id` bo'sh).",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"course_view\",\n  \"page\": \"course_detail\",\n  \"path\": \"/courses/python-asoslari\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Action yuborish (anonim foydalanuvchi)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/analytics/action/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "analytics",
+            "action"
+          ]
+        },
+        "description": "Login qilmagan (anonim) foydalanuvchi uchun action yozadi.\n\n`anonymous_id` — frontend tomonidan generatsiya qilinib, bitta session/browser doirasida barqaror saqlanadigan identifikator (masalan localStorage'da). Bu maydon bo'lmasa yoki bo'sh bo'lsa, backend 400 xato qaytaradi (chunki na user, na anonymous_id — hech kim aniqlanmagan bo'ladi).\n\nIP manzil va created_at backend tomonidan avtomatik yoziladi — requestda yuborilgan har qanday shunga o'xshash qiymatga ishonilmaydi.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"anonymous_id\": \"a8f91c2e-1234-4a2b-9c3d-000000000000\",\n  \"action\": \"course_view\",\n  \"page\": \"courses\",\n  \"path\": \"/courses\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Page-exit yuborish (login qilgan user)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/analytics/page-exit/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "analytics",
+            "page-exit"
+          ]
+        },
+        "description": "Login qilgan foydalanuvchi sahifadan chiqayotganda (yoki boshqa sahifaga o'tayotganda) yuboriladi. `time_spent` — sekundlarda, shu sahifada o'tkazilgan taxminiy vaqt.\n\nexit_reason: navigation | tab_close | browser_close | logout | idle | unknown",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"page\": \"courses\",\n  \"path\": \"/courses\",\n  \"exit_reason\": \"navigation\",\n  \"time_spent\": 145\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Page-exit yuborish (anonim foydalanuvchi)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/analytics/page-exit/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "analytics",
+            "page-exit"
+          ]
+        },
+        "description": "Login qilmagan foydalanuvchi uchun page-exit. `anonymous_id` majburiy — aks holda 400 xato qaytadi.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"anonymous_id\": \"a8f91c2e-1234-4a2b-9c3d-000000000000\",\n  \"page\": \"courses\",\n  \"path\": \"/courses\",\n  \"exit_reason\": \"tab_close\",\n  \"time_spent\": 60\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    }
+  ]
+}

@@ -36,6 +36,7 @@ class Course(BaseModel, SlugMixin):
     views = models.BigIntegerField(default=0)
 
     class Meta:
+        ordering = ("-created_at",)
         indexes = [models.Index(fields=["slug"]), models.Index(fields=["course_type"])]
 
     def save(self, *args, **kwargs):
