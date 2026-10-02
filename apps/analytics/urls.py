@@ -33,7 +33,7 @@ urlpatterns = [
     path("activities/filters/", UserActivityFilterOptionsView.as_view(), name="activities-filters"),
     path("actions-stats/", ActionsStatsView.as_view(), name="actions-stats"),
     path("users/<uuid:user_id>/activity-summary/", UserActivitySummaryView.as_view(), name="user-activity-summary"),
-    path("page-exits/", PageExitListView.as_view(), name="page-exits"),
+    path("page-exit/", PageExitListView.as_view(), name="page-exits"),
     path("pages/stats/", PageStatsView.as_view(), name="pages-stats"),
     path("pages/exit-reasons/", ExitReasonStatsView.as_view(), name="pages-exit-reasons"),
 ]
