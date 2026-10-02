@@ -14,6 +14,7 @@ from .views import (
     PageStatsView,
     RegistrationsStatsView,
     UserActivityListView,
+    UserActivityFilterOptionsView,
     UserActivitySummaryView,
 )
 
@@ -29,6 +30,7 @@ urlpatterns = [
     path("courses/<uuid:course_id>/students/", CourseProgressDetailView.as_view(), name="course-students"),
     path("online/", OnlineUsersView.as_view(), name="online"),
     path("activities/", UserActivityListView.as_view(), name="activities"),
+    path("activities/filters/", UserActivityFilterOptionsView.as_view(), name="activities-filters"),
     path("actions-stats/", ActionsStatsView.as_view(), name="actions-stats"),
     path("users/<uuid:user_id>/activity-summary/", UserActivitySummaryView.as_view(), name="user-activity-summary"),
     path("page-exits/", PageExitListView.as_view(), name="page-exits"),

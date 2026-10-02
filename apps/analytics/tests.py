@@ -150,3 +150,51 @@ class ActionTrackingAPITests(APITestCase):
                 user=self.user, action=ActivityType.LOGIN, anonymous_id=""
             ).exists()
         )
+
+
+class UserActivityFilterAPITests(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = _make_user(telegram_id=10, full_name="Ali Valiyev")
+        self.admin.is_admin = True
+        self.admin.save(update_fields=["is_admin"])
+        token = RefreshToken.for_user(self.admin)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+
+        UserActivity.objects.create(
+            user=self.admin,
+            action=ActivityType.COURSE_VIEW,
+            page="course_detail",
+            path="/courses/python",
+            description="Python kursi",
+            target_type="course",
+            target_id="python-101",
+            meta={"source": "catalog"},
+        )
+        UserActivity.objects.create(
+            anonymous_id="anon-activity-filter",
+            action=ActivityType.PAGE_VIEW,
+            page="home",
+            path="/",
+        )
+
+    def test_activities_can_be_filtered_by_partial_name_and_action(self):
+        response = self.client.get(
+            "/api/admin/analytics/activities/",
+            {"user_name": "valiye", "action": ActivityType.COURSE_VIEW},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["user_name"], "Ali Valiyev")
+
+    def test_filter_options_endpoint_returns_action_and_page_choices(self):
+        response = self.client.get("/api/admin/analytics/activities/filters/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            {"value": ActivityType.COURSE_VIEW, "label": ActivityType.COURSE_VIEW.label},
+            response.data["actions"],
+        )
+        self.assertIn({"value": "course_detail", "label": "course_detail"}, response.data["pages"])
+        self.assertIn({"value": "course", "label": "course"}, response.data["target_types"])

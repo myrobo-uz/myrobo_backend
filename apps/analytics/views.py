@@ -1,6 +1,7 @@
 from collections import defaultdict
 
-from django.db.models import Avg, Count, Sum
+from django.db.models import Avg, Count, Q, Sum, TextField
+from django.db.models.functions import Cast
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -21,6 +22,7 @@ from .models import ActivityType, LoginLog, PageExit, UserActivity
 from .presence import get_online_count, get_online_user_ids
 from .serializers import (
     ActionCreateSerializer,
+    UserActivityFilterOptionsSerializer,
     CourseProgressOverviewSerializer,
     CourseStudentProgressSerializer,
     DonationSerializer,
@@ -323,6 +325,15 @@ class OnlineUsersView(AnalyticsBaseView):
             description="login | page_view | course_view | lesson_view | lesson_complete | "
                         "course_purchase | task_submit | test_submit | article_view | profile_update",
         ),
+        OpenApiParameter("user_name", str, required=False, description="Foydalanuvchi ism-familiyasi bo'yicha qisman qidiruv"),
+        OpenApiParameter("phone", str, required=False, description="Telefon raqami bo'yicha qisman qidiruv"),
+        OpenApiParameter("path", str, required=False, description="Path bo'yicha qisman qidiruv"),
+        OpenApiParameter("description", str, required=False, description="Tavsif bo'yicha qisman qidiruv"),
+        OpenApiParameter("target_type", str, required=False),
+        OpenApiParameter("target_id", str, required=False),
+        OpenApiParameter("meta", str, required=False, description="Metadata matni bo'yicha qisman qidiruv"),
+        OpenApiParameter("user_agent", str, required=False, description="User-Agent bo'yicha qisman qidiruv"),
+        OpenApiParameter("search", str, required=False, description="Foydalanuvchi va barcha action maydonlari bo'yicha qidiruv"),
         DATE_FROM_PARAM,
         DATE_TO_PARAM,
     ],
@@ -337,22 +348,88 @@ class UserActivityListView(generics.ListAPIView):
     def get_queryset(self):
         qs = UserActivity.objects.select_related("user").all()
         qs = _apply_date_range(qs, self.request)
-        user_id = self.request.query_params.get("user_id")
-        anonymous_id = self.request.query_params.get("anonymous_id")
-        ip = self.request.query_params.get("ip")
-        page_name = self.request.query_params.get("page_name")
-        action = self.request.query_params.get("action")
-        if user_id:
-            qs = qs.filter(user_id=user_id)
-        if anonymous_id:
-            qs = qs.filter(anonymous_id=anonymous_id)
-        if ip:
-            qs = qs.filter(ip=ip)
-        if page_name:
-            qs = qs.filter(page=page_name)
-        if action:
-            qs = qs.filter(action=action)
+        params = self.request.query_params
+
+        exact_filters = {
+            "user_id": "user_id",
+            "anonymous_id": "anonymous_id",
+            "ip": "ip",
+            "page_name": "page",
+            "action": "action",
+            "target_type": "target_type",
+            "target_id": "target_id",
+        }
+        for param, field in exact_filters.items():
+            value = params.get(param)
+            if value:
+                qs = qs.filter(**{field: value})
+
+        contains_filters = {
+            "user_name": "user__full_name",
+            "phone": "user__phone_number",
+            "path": "path",
+            "description": "description",
+            "user_agent": "user_agent",
+            "meta": "meta_text",
+        }
+        if params.get("meta"):
+            qs = qs.annotate(meta_text=Cast("meta", output_field=TextField()))
+        for param, field in contains_filters.items():
+            value = params.get(param)
+            if value:
+                qs = qs.filter(**{f"{field}__icontains": value})
+
+        search = params.get("search")
+        if search:
+            qs = qs.annotate(meta_text=Cast("meta", output_field=TextField())).filter(
+                Q(user__full_name__icontains=search)
+                | Q(user__phone_number__icontains=search)
+                | Q(user__telegram_username__icontains=search)
+                | Q(anonymous_id__icontains=search)
+                | Q(action__icontains=search)
+                | Q(description__icontains=search)
+                | Q(page__icontains=search)
+                | Q(path__icontains=search)
+                | Q(target_type__icontains=search)
+                | Q(target_id__icontains=search)
+                | Q(meta_text__icontains=search)
+                | Q(ip__icontains=search)
+                | Q(user_agent__icontains=search)
+            )
         return qs
+
+
+@extend_schema(
+    tags=["Admin: Analytics"],
+    summary="Faoliyat filtrlari uchun select optionlari",
+    responses={200: UserActivityFilterOptionsSerializer},
+)
+class UserActivityFilterOptionsView(AnalyticsBaseView):
+    def get(self, request):
+        action_labels = dict(ActivityType.choices)
+        action_values = set(
+            UserActivity.objects.exclude(action="").values_list("action", flat=True).distinct()
+        )
+        actions = [
+            {"value": value, "label": label}
+            for value, label in ActivityType.choices
+        ]
+        actions.extend(
+            {"value": value, "label": value}
+            for value in sorted(action_values - action_labels.keys())
+        )
+        pages = UserActivity.objects.exclude(page="").values_list("page", flat=True).distinct().order_by("page")
+        target_types = (
+            UserActivity.objects.exclude(target_type="")
+            .values_list("target_type", flat=True)
+            .distinct()
+            .order_by("target_type")
+        )
+        return Response({
+            "actions": actions,
+            "pages": [{"value": value, "label": value} for value in pages],
+            "target_types": [{"value": value, "label": value} for value in target_types],
+        })
 
 
 @extend_schema(

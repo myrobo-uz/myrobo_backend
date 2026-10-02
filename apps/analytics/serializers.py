@@ -72,6 +72,17 @@ class UserActivitySerializer(serializers.ModelSerializer):
         return obj.user.phone_number if obj.user_id else None
 
 
+class ActivityFilterOptionSerializer(serializers.Serializer):
+    value = serializers.CharField()
+    label = serializers.CharField()
+
+
+class UserActivityFilterOptionsSerializer(serializers.Serializer):
+    actions = ActivityFilterOptionSerializer(many=True)
+    pages = ActivityFilterOptionSerializer(many=True)
+    target_types = ActivityFilterOptionSerializer(many=True)
+
+
 class UserActivitySummarySerializer(serializers.Serializer):
     user_id = serializers.UUIDField()
     full_name = serializers.CharField()
