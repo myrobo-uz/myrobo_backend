@@ -5,7 +5,7 @@ from django.views.decorators.cache import cache_page
 from rest_framework.response import Response
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from apps.analytics.activity import ActivityType, log_activity
 from apps.core.pagination import StandardPagination
@@ -29,24 +29,31 @@ class ArticleTypeListAPIView(ListAPIView):
 
 
 @method_decorator(cache_page(60), name="dispatch")
-@extend_schema(tags=["Articles"], summary="Aktiv maqolalar ro'yxati")
+@extend_schema(
+    tags=["Articles"],
+    summary="Aktiv maqolalar ro'yxati",
+    parameters=[OpenApiParameter("tag", str, required=False, description="Teg slug'i bo'yicha filtr")],
+)
 class ArticleListAPIView(ListAPIView):
     serializer_class = ArticleSerializer
     pagination_class = StandardPagination
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        queryset = Articles.objects.filter(is_active=True).select_related("type")
+        queryset = Articles.objects.filter(is_active=True).select_related("type").prefetch_related("tags")
         type_slug = self.request.GET.get("type")
         if type_slug:
             queryset = queryset.filter(type__slug=type_slug)
+        tag = self.request.GET.get("tag")
+        if tag:
+            queryset = queryset.filter(tags__slug=tag)
         return queryset.order_by("-created_at")
 
 
 @method_decorator(cache_page(60), name="dispatch")
 @extend_schema(tags=["Articles"], summary="Maqola tafsiloti")
 class ArticleDetailAPIView(RetrieveAPIView):
-    queryset = Articles.objects.filter(is_active=True)
+    queryset = Articles.objects.filter(is_active=True).prefetch_related("tags")
     serializer_class = ArticleDetailSerializer
     lookup_field = "slug"
     permission_classes = [AllowAny]

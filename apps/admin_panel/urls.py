@@ -21,9 +21,18 @@ from .views import (
     AdminPurchaseViewSet,
     AdminTransactionViewSet,
     AdminLessonTestViewSet,
+    AdminTagViewSet,
     AdminTestQuestionViewSet,
     AdminTestOptionViewSet,
     AdminTestResultViewSet,
+    AdminRankViewSet,
+    AdminXPLogViewSet,
+    AdminCertificateViewSet,
+    AdminProjectViewSet,
+    AdminCompetitionViewSet,
+    AdminCompetitionParticipantViewSet,
+    AdminTopicViewSet,
+    AdminTopicCommentViewSet,
 )
 
 router = DefaultRouter()
@@ -47,6 +56,25 @@ router.register("teachers", AdminTeacherViewSet, basename="admin-teachers")
 router.register("article-types", AdminArticleTypeViewSet, basename="admin-article-types")
 router.register("articles", AdminArticleViewSet, basename="admin-articles")
 router.register("comments", AdminCommentViewSet, basename="admin-comments")
+
+# Tags
+router.register("tags", AdminTagViewSet, basename="admin-tags")
+
+# Gamification
+router.register("ranks", AdminRankViewSet, basename="admin-ranks")
+router.register("xp-logs", AdminXPLogViewSet, basename="admin-xp-logs")
+router.register("certificates", AdminCertificateViewSet, basename="admin-certificates")
+
+# Projects
+router.register("projects", AdminProjectViewSet, basename="admin-projects")
+
+# Competitions
+router.register("competitions", AdminCompetitionViewSet, basename="admin-competitions")
+router.register("competition-participants", AdminCompetitionParticipantViewSet, basename="admin-competition-participants")
+
+# Community
+router.register("topics", AdminTopicViewSet, basename="admin-topics")
+router.register("topic-comments", AdminTopicCommentViewSet, basename="admin-topic-comments")
 
 # Promo
 router.register("companies", AdminCompanyViewSet, basename="admin-companies")

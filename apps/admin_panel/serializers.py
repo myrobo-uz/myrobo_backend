@@ -1,6 +1,11 @@
 from rest_framework import serializers
 
 from apps.articles.models import ArticleType, Articles, Comment
+from apps.core.models import Tag
+from apps.community.models import Topic, TopicComment
+from apps.competitions.models import Competition, CompetitionParticipant
+from apps.gamification.models import Certificate, Rank, XPLog
+from apps.projects.models import Project
 from apps.courses.models import (
     Company,
     CoursePlan,
@@ -27,10 +32,10 @@ class AdminUserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "id", "telegram_id", "phone_number", "telegram_username",
-            "full_name", "avatar", "balance", "is_blocked", "is_admin",
+            "full_name", "avatar", "balance", "is_blocked", "is_admin", "xp",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "telegram_id", "created_at", "updated_at"]
+        read_only_fields = ["id", "telegram_id", "xp", "created_at", "updated_at"]
 
 
 class AdminUserUpdateSerializer(serializers.ModelSerializer):
@@ -63,7 +68,7 @@ class AdminCourseSerializer(serializers.ModelSerializer):
         model = Course
         fields = [
             "id", "course_type", "course_type_title", "title", "description",
-            "price", "image", "slug", "views", "created_at", "updated_at",
+            "price", "image", "slug", "views", "tags", "is_archived", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "slug", "views", "created_at", "updated_at"]
 
@@ -154,7 +159,7 @@ class AdminArticleSerializer(serializers.ModelSerializer):
         model = Articles
         fields = [
             "id", "type", "type_title", "title", "slug", "description",
-            "image", "views", "is_active", "created_at", "updated_at",
+            "image", "views", "tags", "is_active", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "slug", "views", "created_at", "updated_at"]
 
@@ -330,6 +335,124 @@ class AdminTestResultSerializer(serializers.ModelSerializer):
             "unanswered_count", "score_percent", "is_passed", "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+
+
+# ── Tags ───────────────────────────────────────────────────────────────────────
+
+class AdminTagSerializer(serializers.ModelSerializer):
+    courses_count = serializers.IntegerField(read_only=True, default=0)
+    articles_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = Tag
+        fields = ["id", "name", "slug", "courses_count", "articles_count", "created_at"]
+        read_only_fields = ["id", "slug", "created_at"]
+
+
+# ── Gamification ───────────────────────────────────────────────────────────────
+
+class AdminRankSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rank
+        fields = ["id", "title", "slug", "min_xp", "icon", "order", "created_at"]
+        read_only_fields = ["id", "slug", "created_at"]
+
+
+class AdminXPLogSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="user.full_name", read_only=True)
+    reason_display = serializers.CharField(source="get_reason_display", read_only=True)
+
+    class Meta:
+        model = XPLog
+        fields = [
+            "id", "user", "user_name", "amount", "reason", "reason_display",
+            "description", "target_type", "target_id", "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+
+class AdminCertificateSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="user.full_name", read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+
+    class Meta:
+        model = Certificate
+        fields = [
+            "id", "user", "user_name", "course", "course_title",
+            "certificate_number", "created_at",
+        ]
+        read_only_fields = ["id", "certificate_number", "created_at"]
+
+
+# ── Projects ───────────────────────────────────────────────────────────────────
+
+class AdminProjectSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="user.full_name", read_only=True)
+
+    class Meta:
+        model = Project
+        fields = [
+            "id", "user", "user_name", "title", "slug", "description", "image",
+            "tags", "status", "simulator_ref", "views", "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "user", "user_name", "slug", "views", "created_at", "updated_at"]
+
+
+# ── Competitions ───────────────────────────────────────────────────────────────
+
+class AdminCompetitionSerializer(serializers.ModelSerializer):
+    status = serializers.CharField(read_only=True)
+    participants_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = Competition
+        fields = [
+            "id", "title", "slug", "description", "requirements", "image",
+            "directions", "start_date", "end_date", "xp_reward", "is_published",
+            "author", "status", "participants_count", "created_at",
+        ]
+        read_only_fields = ["id", "slug", "created_at"]
+
+
+class AdminCompetitionParticipantSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="user.full_name", read_only=True)
+    competition_title = serializers.CharField(source="competition.title", read_only=True)
+
+    class Meta:
+        model = CompetitionParticipant
+        fields = [
+            "id", "competition", "competition_title", "user", "user_name",
+            "status", "submission_note", "xp_awarded", "created_at",
+        ]
+        read_only_fields = ["id", "competition", "user", "xp_awarded", "created_at"]
+
+
+# ── Community ──────────────────────────────────────────────────────────────────
+
+class AdminTopicSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="user.full_name", read_only=True)
+    comments_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = Topic
+        fields = [
+            "id", "user", "user_name", "title", "slug", "description", "tags",
+            "is_solved", "is_active", "views", "comments_count", "created_at",
+        ]
+        read_only_fields = ["id", "user", "user_name", "slug", "views", "created_at"]
+
+
+class AdminTopicCommentSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="user.full_name", read_only=True)
+    topic_title = serializers.CharField(source="topic.title", read_only=True)
+
+    class Meta:
+        model = TopicComment
+        fields = [
+            "id", "topic", "topic_title", "user", "user_name",
+            "text", "is_accepted", "is_active", "created_at",
+        ]
+        read_only_fields = ["id", "topic", "user", "created_at"]
 
 
 # ── Dashboard ──────────────────────────────────────────────────────────────────

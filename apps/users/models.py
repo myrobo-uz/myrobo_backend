@@ -16,6 +16,7 @@ class User(BaseModel):
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     is_blocked = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
+    xp = models.PositiveIntegerField(default=0, db_index=True)
 
     class Meta:
         db_table = "users_user"

@@ -34,10 +34,16 @@ class Course(BaseModel, SlugMixin):
     image = models.ImageField(upload_to="course/images")
     slug = models.SlugField(unique=True, blank=True)
     views = models.BigIntegerField(default=0)
+    tags = models.ManyToManyField("core.Tag", blank=True, related_name="courses")
+    is_archived = models.BooleanField(default=False)
 
     class Meta:
         ordering = ("-created_at",)
-        indexes = [models.Index(fields=["slug"]), models.Index(fields=["course_type"])]
+        indexes = [
+            models.Index(fields=["slug"]),
+            models.Index(fields=["course_type"]),
+            models.Index(fields=["is_archived"]),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.slug:

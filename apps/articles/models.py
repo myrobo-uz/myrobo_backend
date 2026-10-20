@@ -38,6 +38,7 @@ class Articles(BaseModel):
     image = models.ImageField(upload_to="articles/images")
     views = models.BigIntegerField(default=0)
     is_active = models.BooleanField(default=False)
+    tags = models.ManyToManyField("core.Tag", blank=True, related_name="articles")
 
     class Meta:
         indexes = [

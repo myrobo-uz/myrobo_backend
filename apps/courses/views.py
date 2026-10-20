@@ -15,7 +15,7 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 
@@ -67,11 +67,25 @@ class CourseTypeListCreateView(APIView):
 
 
 
-@extend_schema(tags=["Courses"], summary="Kurslar ro'yxati")
+@extend_schema(
+    tags=["Courses"],
+    summary="Kurslar ro'yxati",
+    parameters=[OpenApiParameter("tag", str, required=False, description="Teg slug'i bo'yicha filtr")],
+)
 class CourseListAPIView(ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = CourseListSerializer
-    queryset = Course.objects.select_related("course_type").prefetch_related("teachers")
+
+    def get_queryset(self):
+        qs = (
+            Course.objects.filter(is_archived=False)
+            .select_related("course_type")
+            .prefetch_related("teachers", "tags")
+        )
+        tag = self.request.query_params.get("tag")
+        if tag:
+            qs = qs.filter(tags__slug=tag)
+        return qs
 
 
 @extend_schema(tags=["Courses"], summary="Kurs tafsiloti")
@@ -79,7 +93,7 @@ class CourseDetailAPIView(RetrieveAPIView):
     permission_classes = [AllowAny]
     serializer_class = CourseDetailSerializer
     queryset = Course.objects.select_related("course_type").prefetch_related(
-        "teachers", "modules__lessons"
+        "teachers", "modules__lessons", "tags"
     )
     lookup_field = "slug"
 
@@ -145,8 +159,12 @@ class CompleteLessonAPIView(APIView):
     permission_classes = [IsCourseSubscribed]
 
     def post(self, request, slug):
+        from apps.gamification.models import XPReason
+        from apps.gamification.utils import award_xp, issue_certificate_if_course_completed
+
         lesson = Lesson.objects.get(slug=slug)
         obj, _ = LessonProgress.objects.get_or_create(user=request.user, lesson=lesson)
+        already_completed = obj.is_completed
         obj.is_completed = True
         obj.completed_at = timezone.now()
         obj.save(update_fields=["is_completed", "completed_at", "updated_at"])
@@ -154,6 +172,12 @@ class CompleteLessonAPIView(APIView):
             request.user, ActivityType.LESSON_COMPLETE, request=request,
             description=lesson.title, target=lesson,
         )
+        if not already_completed:
+            award_xp(
+                request.user, amount=10, reason=XPReason.LESSON_COMPLETE,
+                description=lesson.title, target=lesson,
+            )
+            issue_certificate_if_course_completed(request.user, lesson.module.course)
         return Response({"status": "completed", "lesson": lesson.slug})
 
 

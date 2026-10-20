@@ -47,6 +47,10 @@ INSTALLED_APPS = [
     "apps.lessontest",
     "apps.admin_panel",
     "apps.analytics",
+    "apps.gamification",
+    "apps.projects",
+    "apps.competitions",
+    "apps.community",
 ]
 
 MIDDLEWARE = [
@@ -182,6 +186,10 @@ SPECTACULAR_SETTINGS = {
         {"name": "Courses", "description": "Kurslar, modullar, darslar va sotib olish"},
         {"name": "Teachers", "description": "O'qituvchilar ro'yxati va tafsilotlari"},
         {"name": "Payment", "description": "Payme to'lov tizimi integratsiyasi"},
+        {"name": "Gamification", "description": "Rank, XP, sertifikat va reyting jadvali"},
+        {"name": "Projects", "description": "Foydalanuvchi loyihalari (portfolio), simulyator bilan bog'lanish"},
+        {"name": "Competitions", "description": "Musobaqalar, ishtirokchilar va g'oliblar"},
+        {"name": "Community", "description": "Forum: mavzular, izohlar, like va yechim belgilash"},
         {
             "name": "Analytics: Tracking",
             "description": (

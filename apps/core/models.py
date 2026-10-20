@@ -1,6 +1,8 @@
 from django.db import models
 import uuid
 
+from apps.core.utils import SlugMixin
+
 
 class BaseModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -27,4 +29,27 @@ class Contact(BaseModel):
 
     def __str__(self):
         return f"{self.name} | {self.email}"
- 
+
+
+class Tag(BaseModel, SlugMixin):
+    """Umumiy teg — kurslar, maqolalar va boshqa modullar tomonidan qayta ishlatiladi."""
+
+    slug_field = "name"
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=120, unique=True, blank=True)
+
+    class Meta:
+        db_table = "core_tag"
+        ordering = ["name"]
+        verbose_name = "Teg"
+        verbose_name_plural = "Teglar"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = self.generate_unique_slug()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+

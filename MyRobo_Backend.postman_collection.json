@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "3c27b596-0649-4154-8bc8-91fc4916bce9",
+    "_postman_id": "0158f66c-1ee0-4fe8-8c80-3c854ec73a9a",
     "name": "MyRobo Backend API",
-    "description": "MyRobo loyihasining to'liq backend API kolleksiyasi (Django + DRF).\n\n**Autentifikatsiya**: JWT Bearer token. Avval `Auth` papkasidagi \"Bot uchun OTP kod yaratish\" va \"OTP kodni tekshirish va login\" so'rovlarini ishga tushiring — access/refresh tokenlar avtomatik ravishda collection o'zgaruvchilariga (`access_token`, `refresh_token`) saqlanadi.\n\nAdmin panel va admin analytics so'rovlari uchun alohida `admin_token` o'zgaruvchisini (is_admin=true bo'lgan foydalanuvchi access tokeni) qo'lda kiriting.\n\n`{{base_url}}` ni muhitingizga (masalan `http://localhost:8000` yoki production domenga) moslang.",
+    "description": "MyRobo loyihasining to'liq backend API kolleksiyasi (Django + DRF).\n\n**Base URL**: `base_url` production domenga (`https://myrobo.uz`) sozlangan — barcha so'rovlar to'g'ridan-to'g'ri jonli serverga boradi. Agar lokal/staging muhitda sinamoqchi bo'lsangiz, collection variable'dagi `base_url`ni (masalan `http://localhost:8000`ga) o'zgartiring.\n\n**Autentifikatsiya**: JWT Bearer token. Avval `Auth (Users)` papkasidagi \"Bot uchun OTP kod yaratish\" → \"OTP kodni tekshirish va login\" so'rovlarini ketma-ket yuboring — `access_token`/`refresh_token` avtomatik ravishda collection o'zgaruvchilariga saqlanadi.\n\nAdmin panel va admin analytics so'rovlari uchun alohida `admin_token` o'zgaruvchisini (is_admin=true bo'lgan foydalanuvchi access tokeni) qo'lda kiriting.\n\nPayme webhook uchun `payme_login`/`payme_secret_key`, bot endpoint uchun `bot_api_secret` o'zgaruvchilarini to'ldiring.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -18,7 +18,7 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:8000",
+      "value": "https://myrobo.uz",
       "type": "string"
     },
     {
@@ -138,9 +138,7 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    const data = pm.response.json();",
-                  "    if (data.code) {",
-                  "        pm.collectionVariables.set('otp_code', data.code);",
-                  "    }",
+                  "    if (data.code) { pm.collectionVariables.set('otp_code', data.code); }",
                   "}"
                 ]
               }
@@ -242,12 +240,8 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    const data = pm.response.json();",
-                  "    if (data.access) {",
-                  "        pm.collectionVariables.set('access_token', data.access);",
-                  "    }",
-                  "    if (data.refresh) {",
-                  "        pm.collectionVariables.set('refresh_token', data.refresh);",
-                  "    }",
+                  "    if (data.access) { pm.collectionVariables.set('access_token', data.access); }",
+                  "    if (data.refresh) { pm.collectionVariables.set('refresh_token', data.refresh); }",
                   "}"
                 ]
               }
@@ -405,9 +399,7 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    const data = pm.response.json();",
-                  "    if (data.access) {",
-                  "        pm.collectionVariables.set('access_token', data.access);",
-                  "    }",
+                  "    if (data.access) { pm.collectionVariables.set('access_token', data.access); }",
                   "}"
                 ]
               }
@@ -6215,7 +6207,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/admin/analytics/activities/?user_id=&anonymous_id=&ip=&page_name=&action=&date_from=&date_to=&page=1",
+              "raw": "{{base_url}}/api/admin/analytics/activities/?user_id=&anonymous_id=&ip=&page_name=&action=&user_name=&phone=&path=&description=&target_type=&target_id=&meta=&user_agent=&search=&date_from=&date_to=&page=1",
               "host": [
                 "{{base_url}}"
               ],
@@ -6252,6 +6244,51 @@
                   "disabled": true
                 },
                 {
+                  "key": "user_name",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "phone",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "path",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "description",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "target_type",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "target_id",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "meta",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "user_agent",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
                   "key": "date_from",
                   "value": "",
                   "disabled": true
@@ -6268,7 +6305,39 @@
                 }
               ]
             },
-            "description": "Login qilgan va anonim foydalanuvchilarning barcha actionlari. anonymous_id bo'yicha filtrlab bitta anonim tashrifchining ketma-ket actionlarini, ip bo'yicha esa texnik tahlil qilish mumkin. Eslatma: `page_name` — sahifa nomi bo'yicha filtr, `page` — pagination sahifa raqami.",
+            "description": "Login qilgan va anonim foydalanuvchilarning barcha actionlari. `search` — barcha maydonlar bo'yicha umumiy qidiruv; qolganlari aniq maydon bo'yicha filtr. `page_name` — sahifa nomi, `page` — pagination raqami (ularni bir-biriga chalkashtirmang).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Faoliyat filtrlari uchun select optionlari",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/analytics/activities/filters/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "analytics",
+                "activities",
+                "filters"
+              ]
+            },
+            "description": "Admin paneldagi filter select'lari (action turlari, page nomlari, target_type'lar) uchun mavjud qiymatlar ro'yxatini qaytaradi.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -6380,7 +6449,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/admin/analytics/page-exits/?user_id=&anonymous_id=&page_name=&exit_reason=&date_from=&date_to=&page=1",
+              "raw": "{{base_url}}/api/admin/analytics/page-exit/?user_id=&anonymous_id=&page_name=&exit_reason=&date_from=&date_to=&page=1",
               "host": [
                 "{{base_url}}"
               ],
@@ -6388,7 +6457,7 @@
                 "api",
                 "admin",
                 "analytics",
-                "page-exits"
+                "page-exit"
               ],
               "query": [
                 {

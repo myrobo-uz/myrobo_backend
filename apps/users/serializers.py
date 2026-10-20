@@ -61,10 +61,14 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "balance",
             "avatar",
             "is_blocked",
+            "xp",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "telegram_id", "created_at", "updated_at", "balance", "is_blocked", "phone_number"]
+        read_only_fields = [
+            "id", "telegram_id", "created_at", "updated_at",
+            "balance", "is_blocked", "phone_number", "xp",
+        ]
 
 
 class UserResponseSerializer(serializers.Serializer):

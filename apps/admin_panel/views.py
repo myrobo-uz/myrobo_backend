@@ -10,7 +10,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.articles.models import ArticleType, Articles, Comment
+from apps.core.models import Tag
 from apps.core.pagination import StandardPagination
+from apps.community.models import Topic, TopicComment
+from apps.competitions.models import Competition, CompetitionParticipant, ParticipantStatus
+from apps.gamification.models import Certificate, Rank, XPLog, XPReason
+from apps.gamification.serializers import AwardXPRequestSerializer
+from apps.gamification.utils import award_xp
+from apps.projects.models import Project
 from apps.courses.models import (
     Company,
     CoursePlan,
@@ -35,8 +42,13 @@ from .serializers import (
     AdminAddBalanceSerializer,
     AdminArticleSerializer,
     AdminArticleTypeSerializer,
+    AdminCertificateSerializer,
     AdminCommentSerializer,
     AdminCompanySerializer,
+    AdminCompetitionParticipantSerializer,
+    AdminCompetitionSerializer,
+    AdminTopicSerializer,
+    AdminTopicCommentSerializer,
     AdminCoursePlanSerializer,
     AdminCourseSerializer,
     AdminCourseTypeSerializer,
@@ -46,16 +58,20 @@ from .serializers import (
     AdminLessonTestSerializer,
     AdminModuleSerializer,
     AdminPromoCodeSerializer,
+    AdminProjectSerializer,
     AdminPurchaseSerializer,
+    AdminRankSerializer,
     AdminSubscriptionSerializer,
     AdminTaskTestCaseSerializer,
     AdminTeacherSerializer,
+    AdminTagSerializer,
     AdminTestOptionSerializer,
     AdminTestQuestionSerializer,
     AdminTestResultSerializer,
     AdminTransactionSerializer,
     AdminUserSerializer,
     AdminUserUpdateSerializer,
+    AdminXPLogSerializer,
 )
 
 
@@ -83,6 +99,213 @@ class AdminReadOnlyViewSet(
     mixins.RetrieveModelMixin,
 ):
     pass
+
+
+# ── Gamification: Ranks ─────────────────────────────────────────────────────────
+
+@extend_schema(tags=["Admin: Gamification"])
+class AdminRankViewSet(AdminReadWriteViewSet):
+    serializer_class = AdminRankSerializer
+    queryset = Rank.objects.all()
+
+
+# ── Gamification: XP Logs (readonly) ─────────────────────────────────────────────
+
+@extend_schema(tags=["Admin: Gamification"])
+class AdminXPLogViewSet(AdminReadOnlyViewSet):
+    serializer_class = AdminXPLogSerializer
+
+    def get_queryset(self):
+        qs = XPLog.objects.select_related("user").order_by("-created_at")
+        user_id = self.request.query_params.get("user_id")
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        reason = self.request.query_params.get("reason")
+        if reason:
+            qs = qs.filter(reason=reason)
+        return qs
+
+
+# ── Gamification: Certificates (readonly) ────────────────────────────────────────
+
+@extend_schema(tags=["Admin: Gamification"])
+class AdminCertificateViewSet(AdminReadOnlyViewSet):
+    serializer_class = AdminCertificateSerializer
+
+    def get_queryset(self):
+        qs = Certificate.objects.select_related("user", "course").order_by("-created_at")
+        user_id = self.request.query_params.get("user_id")
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        course_id = self.request.query_params.get("course_id")
+        if course_id:
+            qs = qs.filter(course_id=course_id)
+        return qs
+
+
+# ── Projects (moderation only — egasi foydalanuvchi, admin yaratmaydi) ─────────
+
+@extend_schema(tags=["Admin: Projects"])
+class AdminProjectViewSet(
+    AdminBaseViewSet,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+):
+    serializer_class = AdminProjectSerializer
+
+    def get_queryset(self):
+        qs = Project.objects.select_related("user").prefetch_related("tags").order_by("-created_at")
+        status_param = self.request.query_params.get("status")
+        if status_param:
+            qs = qs.filter(status=status_param)
+        user_id = self.request.query_params.get("user_id")
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            qs = qs.filter(title__icontains=search)
+        return qs
+
+    @extend_schema(summary="Loyihani arxivga olish", request=None)
+    @action(detail=True, methods=["post"], url_path="archive")
+    def archive(self, request, pk=None):
+        from apps.projects.models import ProjectStatus
+        project = self.get_object()
+        project.status = ProjectStatus.ARCHIVED
+        project.save(update_fields=["status", "updated_at"])
+        return Response(AdminProjectSerializer(project).data)
+
+
+# ── Competitions ───────────────────────────────────────────────────────────────
+
+@extend_schema(tags=["Admin: Competitions"])
+class AdminCompetitionViewSet(AdminReadWriteViewSet):
+    serializer_class = AdminCompetitionSerializer
+
+    def get_queryset(self):
+        return Competition.objects.prefetch_related("directions").annotate(
+            participants_count=Count("participants", distinct=True)
+        ).order_by("-start_date")
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+
+@extend_schema(tags=["Admin: Competitions"])
+class AdminCompetitionParticipantViewSet(
+    AdminBaseViewSet,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+):
+    serializer_class = AdminCompetitionParticipantSerializer
+
+    def get_queryset(self):
+        qs = CompetitionParticipant.objects.select_related("user", "competition").order_by("-created_at")
+        competition_id = self.request.query_params.get("competition_id")
+        if competition_id:
+            qs = qs.filter(competition_id=competition_id)
+        status_param = self.request.query_params.get("status")
+        if status_param:
+            qs = qs.filter(status=status_param)
+        return qs
+
+    @extend_schema(summary="Ishtirokchini g'olib deb belgilash va XP berish", request=None)
+    @action(detail=True, methods=["post"], url_path="mark-winner")
+    def mark_winner(self, request, pk=None):
+        participant = self.get_object()
+        participant.status = ParticipantStatus.WINNER
+        if not participant.xp_awarded and participant.competition.xp_reward > 0:
+            award_xp(
+                participant.user, amount=participant.competition.xp_reward,
+                reason=XPReason.COMPETITION_WIN,
+                description=participant.competition.title, target=participant.competition,
+            )
+            participant.xp_awarded = True
+        participant.save(update_fields=["status", "xp_awarded", "updated_at"])
+        return Response(AdminCompetitionParticipantSerializer(participant).data)
+
+
+# ── Community ──────────────────────────────────────────────────────────────────
+
+@extend_schema(tags=["Admin: Community"])
+class AdminTopicViewSet(
+    AdminBaseViewSet,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+):
+    serializer_class = AdminTopicSerializer
+
+    def get_queryset(self):
+        qs = Topic.objects.select_related("user").prefetch_related("tags").annotate(
+            comments_count=Count("comments", distinct=True)
+        ).order_by("-created_at")
+        is_active = self.request.query_params.get("is_active")
+        if is_active is not None:
+            qs = qs.filter(is_active=is_active.lower() == "true")
+        is_solved = self.request.query_params.get("is_solved")
+        if is_solved is not None:
+            qs = qs.filter(is_solved=is_solved.lower() == "true")
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            qs = qs.filter(title__icontains=search)
+        return qs
+
+    @extend_schema(summary="Mavzuni faollashtirish", request=None)
+    @action(detail=True, methods=["post"], url_path="activate")
+    def activate(self, request, pk=None):
+        topic = self.get_object()
+        topic.is_active = True
+        topic.save(update_fields=["is_active", "updated_at"])
+        return Response(AdminTopicSerializer(topic).data)
+
+    @extend_schema(summary="Mavzuni yashirish", request=None)
+    @action(detail=True, methods=["post"], url_path="deactivate")
+    def deactivate(self, request, pk=None):
+        topic = self.get_object()
+        topic.is_active = False
+        topic.save(update_fields=["is_active", "updated_at"])
+        return Response(AdminTopicSerializer(topic).data)
+
+
+@extend_schema(tags=["Admin: Community"])
+class AdminTopicCommentViewSet(
+    AdminBaseViewSet,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+):
+    serializer_class = AdminTopicCommentSerializer
+
+    def get_queryset(self):
+        qs = TopicComment.objects.select_related("user", "topic").order_by("-created_at")
+        topic_id = self.request.query_params.get("topic_id")
+        if topic_id:
+            qs = qs.filter(topic_id=topic_id)
+        is_active = self.request.query_params.get("is_active")
+        if is_active is not None:
+            qs = qs.filter(is_active=is_active.lower() == "true")
+        return qs
+
+    @extend_schema(summary="Izohni tasdiqlash", request=None)
+    @action(detail=True, methods=["post"], url_path="approve")
+    def approve(self, request, pk=None):
+        comment = self.get_object()
+        comment.is_active = True
+        comment.save(update_fields=["is_active", "updated_at"])
+        return Response(AdminTopicCommentSerializer(comment).data)
+
+    @extend_schema(summary="Izohni rad etish", request=None)
+    @action(detail=True, methods=["post"], url_path="reject")
+    def reject(self, request, pk=None):
+        comment = self.get_object()
+        comment.is_active = False
+        comment.save(update_fields=["is_active", "updated_at"])
+        return Response(AdminTopicCommentSerializer(comment).data)
 
 
 # ── Dashboard ──────────────────────────────────────────────────────────────────
@@ -207,6 +430,25 @@ class AdminUserViewSet(
         user.save(update_fields=["balance", "updated_at"])
         return Response(AdminUserSerializer(user).data)
 
+    @extend_schema(
+        summary="Foydalanuvchiga qo'lda XP berish",
+        request=AwardXPRequestSerializer,
+        responses={200: AdminUserSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="award-xp")
+    def award_xp_action(self, request, pk=None):
+        user = self.get_object()
+        serializer = AwardXPRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        award_xp(
+            user,
+            amount=serializer.validated_data["amount"],
+            reason=XPReason.MANUAL,
+            description=serializer.validated_data.get("description", ""),
+        )
+        user.refresh_from_db()
+        return Response(AdminUserSerializer(user).data)
+
 
 # ── Course Types ───────────────────────────────────────────────────────────────
 
@@ -225,14 +467,36 @@ class AdminCourseViewSet(AdminReadWriteViewSet):
     serializer_class = AdminCourseSerializer
 
     def get_queryset(self):
-        qs = Course.objects.select_related("course_type").order_by("-created_at")
+        qs = Course.objects.select_related("course_type").prefetch_related("tags").order_by("-created_at")
         course_type = self.request.query_params.get("course_type")
         if course_type:
             qs = qs.filter(course_type_id=course_type)
+        is_archived = self.request.query_params.get("is_archived")
+        if is_archived is not None:
+            qs = qs.filter(is_archived=is_archived.lower() == "true")
+        tag = self.request.query_params.get("tag")
+        if tag:
+            qs = qs.filter(tags__slug=tag)
         search = self.request.query_params.get("search", "").strip()
         if search:
             qs = qs.filter(title__icontains=search)
         return qs
+
+    @extend_schema(summary="Kursni arxivga olish", request=None)
+    @action(detail=True, methods=["post"], url_path="archive")
+    def archive(self, request, pk=None):
+        course = self.get_object()
+        course.is_archived = True
+        course.save(update_fields=["is_archived", "updated_at"])
+        return Response(AdminCourseSerializer(course).data)
+
+    @extend_schema(summary="Kursni arxivdan chiqarish", request=None)
+    @action(detail=True, methods=["post"], url_path="unarchive")
+    def unarchive(self, request, pk=None):
+        course = self.get_object()
+        course.is_archived = False
+        course.save(update_fields=["is_archived", "updated_at"])
+        return Response(AdminCourseSerializer(course).data)
 
 
 # ── Modules ────────────────────────────────────────────────────────────────────
@@ -341,13 +605,16 @@ class AdminArticleViewSet(AdminReadWriteViewSet):
     serializer_class = AdminArticleSerializer
 
     def get_queryset(self):
-        qs = Articles.objects.select_related("type").order_by("-created_at")
+        qs = Articles.objects.select_related("type").prefetch_related("tags").order_by("-created_at")
         is_active = self.request.query_params.get("is_active")
         if is_active is not None:
             qs = qs.filter(is_active=is_active.lower() == "true")
         article_type = self.request.query_params.get("type_id")
         if article_type:
             qs = qs.filter(type_id=article_type)
+        tag = self.request.query_params.get("tag")
+        if tag:
+            qs = qs.filter(tags__slug=tag)
         search = self.request.query_params.get("search", "").strip()
         if search:
             qs = qs.filter(title__icontains=search)
@@ -407,6 +674,23 @@ class AdminCommentViewSet(
         comment.is_active = False
         comment.save(update_fields=["is_active", "updated_at"])
         return Response(AdminCommentSerializer(comment).data)
+
+
+# ── Tags ───────────────────────────────────────────────────────────────────────
+
+@extend_schema(tags=["Admin: Tags"])
+class AdminTagViewSet(AdminReadWriteViewSet):
+    serializer_class = AdminTagSerializer
+
+    def get_queryset(self):
+        qs = Tag.objects.annotate(
+            courses_count=Count("courses", distinct=True),
+            articles_count=Count("articles", distinct=True),
+        ).order_by("name")
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            qs = qs.filter(name__icontains=search)
+        return qs
 
 
 # ── Companies ──────────────────────────────────────────────────────────────────

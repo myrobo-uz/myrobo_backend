@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.core.serializers import TagSerializer
+
 from .models import (
     Course,
     CoursePlan,
@@ -122,10 +124,11 @@ class CourseListSerializer(serializers.ModelSerializer):
     course_type = CourseTypeSerializer()
     teachers = serializers.SerializerMethodField()
     enrolled_count = serializers.SerializerMethodField()
+    tags = TagSerializer(many=True, read_only=True)
 
     class Meta:
         model = Course
-        fields = ["title", "slug", "price", "image", "course_type", "teachers", "enrolled_count"]
+        fields = ["title", "slug", "price", "image", "course_type", "teachers", "enrolled_count", "tags"]
 
     def get_teachers(self, obj):
         from apps.teachers.serializers import TeacherShortSerializer
@@ -142,10 +145,14 @@ class CourseDetailSerializer(serializers.ModelSerializer):
     modules = ModuleSerializer(many=True, read_only=True)
     teachers = serializers.SerializerMethodField()
     enrolled_count = serializers.SerializerMethodField()
+    tags = TagSerializer(many=True, read_only=True)
 
     class Meta:
         model = Course
-        fields = ["id", "title", "description", "price", "image", "slug", "course_type", "teachers", "modules", "enrolled_count"]
+        fields = [
+            "id", "title", "description", "price", "image", "slug", "course_type",
+            "teachers", "modules", "enrolled_count", "tags",
+        ]
 
     def get_teachers(self, obj):
         from apps.teachers.serializers import TeacherShortSerializer

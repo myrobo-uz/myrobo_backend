@@ -160,6 +160,15 @@ class SubmitTestView(APIView):
             meta={"score_percent": float(result.score_percent), "is_passed": is_passed},
         )
 
+        if is_passed:
+            from apps.gamification.models import XPReason
+            from apps.gamification.utils import award_xp
+
+            award_xp(
+                request.user, amount=20, reason=XPReason.TEST_PASSED,
+                description=test.title, target=test,
+            )
+
         result_data = TestResultDetailSerializer(result).data
         return Response(result_data, status=status.HTTP_201_CREATED)
 

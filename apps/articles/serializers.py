@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.core.pagination import StandardPagination
+from apps.core.serializers import TagSerializer
 
 from .models import ArticleType, Articles, Comment
 
@@ -14,10 +15,11 @@ class ArticleTypeSerializer(serializers.ModelSerializer):
 
 class ArticleSerializer(serializers.ModelSerializer):
     type = serializers.SlugRelatedField(slug_field="title", read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
 
     class Meta:
         model = Articles
-        fields = ["type", "title", "description", "image", "views", "slug", "created_at"]
+        fields = ["type", "title", "description", "image", "views", "slug", "created_at", "tags"]
         read_only_fields = ["views", "slug", "created_at"]
 
 
@@ -34,10 +36,14 @@ class CommentSerializer(serializers.ModelSerializer):
 class ArticleDetailSerializer(serializers.ModelSerializer):
     type = serializers.CharField(source="type.title")
     comments = serializers.SerializerMethodField()
+    tags = TagSerializer(many=True, read_only=True)
 
     class Meta:
         model = Articles
-        fields = ["type", "title", "description", "image", "views", "slug", "created_at", "comments"]
+        fields = [
+            "type", "title", "description", "image", "views", "slug",
+            "created_at", "comments", "tags",
+        ]
 
     def get_comments(self, obj):
         request = self.context.get("request")
