@@ -101,8 +101,8 @@ class TopicWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Topic
-        fields = ["id", "title", "description", "tags"]
-        read_only_fields = ["id"]
+        fields = ["id", "slug", "title", "description", "tags"]
+        read_only_fields = ["id", "slug"]
 
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user

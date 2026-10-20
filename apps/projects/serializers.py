@@ -36,8 +36,8 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ["id", "title", "description", "image", "tags", "status", "simulator_ref"]
-        read_only_fields = ["id"]
+        fields = ["id", "slug", "title", "description", "image", "tags", "status", "simulator_ref"]
+        read_only_fields = ["id", "slug"]
 
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user

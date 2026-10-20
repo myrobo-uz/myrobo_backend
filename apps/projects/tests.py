@@ -31,10 +31,11 @@ class ProjectAPITests(APITestCase):
         self._auth(self.owner_token)
         response = self.client.post("/projects/create/", {"title": "Robot qo'li", "description": "Qo'l prototipi"})
         self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.data.get("slug"), "create response must return slug for client navigation")
         project = Project.objects.get(id=response.data["id"])
         self.assertEqual(project.user, self.owner)
         self.assertEqual(project.status, ProjectStatus.ACTIVE)
-        self.assertTrue(project.slug)
+        self.assertEqual(project.slug, response.data["slug"])
 
     def test_public_list_excludes_archived_projects(self):
         Project.objects.create(user=self.owner, title="Faol loyiha", status=ProjectStatus.ACTIVE)

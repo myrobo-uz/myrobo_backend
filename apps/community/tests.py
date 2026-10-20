@@ -32,9 +32,11 @@ class CommunityAPITests(APITestCase):
             "/community/topics/create/", {"title": "Arduino bilan muammo", "description": "Yordam kerak"},
         )
         self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.data.get("slug"), "create response must return slug for client navigation")
         topic = Topic.objects.get(id=response.data["id"])
         self.assertEqual(topic.user, self.owner)
         self.assertFalse(topic.is_solved)
+        self.assertEqual(topic.slug, response.data["slug"])
 
     def test_public_list_excludes_inactive_topics(self):
         Topic.objects.create(user=self.owner, title="Faol mavzu", description="...")
