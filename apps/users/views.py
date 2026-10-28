@@ -8,12 +8,14 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 
 from apps.analytics.activity import ActivityType, log_activity
 from apps.analytics.models import LoginLog
 from apps.analytics.utils import get_client_ip
 
+from .cookies import clear_refresh_cookie, set_refresh_cookie
 from .models import User
 from .serializers import (
     BotGenerateCodeRequestSerializer,
@@ -22,6 +24,7 @@ from .serializers import (
     LoginResponseSerializer,
     TelegramDataSerializer,
     UserDetailSerializer,
+    UserTokenRefreshSerializer,
     VerifyCodeRequestSerializer,
 )
 from .utils import save_otp, verify_otp
@@ -224,12 +227,35 @@ class VerifyCodeAPIView(APIView):
         )
 
         refresh = RefreshToken.for_user(user)
-        return Response({
+        response = Response({
             "status": "signup" if created else "login",
             "access": str(refresh.access_token),
             "refresh": str(refresh),
             "user": _user_payload(user, request),
         })
+        set_refresh_cookie(response, refresh)
+        return response
+
+
+@extend_schema(
+    tags=["Auth"],
+    summary="Chiqish (SSO cookie'ni tozalash)",
+    description=(
+        "Umumiy (parent-domain) refresh cookie'ni o'chiradi — shundan so'ng "
+        "hech bir frontend shu cookie orqali jimgina yangi access token ololmaydi. "
+        "Har bir frontend o'zining joriy access/refresh tokenini (localStorage/memory) "
+        "alohida tozalashi kerak."
+    ),
+    request=None,
+)
+class LogoutAPIView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        response = Response({"status": "logged_out"})
+        clear_refresh_cookie(response)
+        return response
 
 
 @extend_schema(
@@ -295,3 +321,25 @@ class AllTelegramIdsView(APIView):
             User.objects.filter(telegram_id__isnull=False).values_list("telegram_id", flat=True)
         )
         return Response({"telegram_ids": ids})
+
+
+@extend_schema(
+    tags=["Auth"],
+    summary="Access tokenni yangilash (SSO: cookie orqali ham ishlaydi)",
+    description=(
+        "`refresh` request body'da berilmasa, umumiy (parent-domain) "
+        "httponly cookie'dan o'qiladi — shu orqali boshqa frontend "
+        "(masalan market.myrobo.uz) `credentials: 'include'` bilan bo'sh "
+        "tanadagi so'rov yuborib, qayta OTP kiritmasdan yangi access token oladi."
+    ),
+)
+class UserTokenRefreshView(TokenRefreshView):
+    serializer_class = UserTokenRefreshSerializer
+
+    def post(self, request, *args, **kwargs):
+        refresh = request.data.get("refresh") or request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
+        if not refresh:
+            return Response({"detail": "refresh token topilmadi"}, status=status.HTTP_401_UNAUTHORIZED)
+        serializer = self.get_serializer(data={"refresh": refresh})
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)

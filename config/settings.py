@@ -23,6 +23,10 @@ CORS_ALLOWED_ORIGINS = [
     x.strip() for x in os.environ.get("DJANGO_CORS_ALLOWED_ORIGINS", "").split(",") if x.strip()
 ]
 CORS_ALLOW_ALL_ORIGINS = DEBUG
+# SSO: boshqa frontend (masalan market.myrobo.uz) parent-domain cookie orqali
+# refresh tokenni o'qib, o'z access tokenini jimgina olishi uchun kredensial
+# (cookie) bilan cross-origin so'rovlarga ruxsat berish shart.
+CORS_ALLOW_CREDENTIALS = True
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -218,6 +222,20 @@ SIMPLE_JWT = {
     "USER_ID_FIELD": "id",
     "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
 }
+
+# ── SSO (bir nechta frontend o'rtasida umumiy login) ────────────────────────
+# Refresh token login paytida shu nomdagi httponly cookie sifatida ham
+# qo'yiladi (Domain=SSO_COOKIE_DOMAIN bilan). Boshqa frontend (masalan
+# market.myrobo.uz) sahifa yuklanganda osh cookie bilan
+# POST /user/token/refresh/ ni credentials: 'include' bilan chaqirib, OTP
+# qayta kiritmasdan o'zining access tokenini oladi.
+#
+# SSO_COOKIE_DOMAIN bo'sh bo'lsa, cookie faqat so'rov kelgan aniq hostga
+# tegishli bo'ladi (cross-subdomain ulashilmaydi) — lokal/staging uchun
+# xavfsiz standart holat. Productionda ".myrobo.uz" kabi parent domenni
+# SSO_COOKIE_DOMAIN env orqali bering.
+SSO_COOKIE_DOMAIN = os.environ.get("SSO_COOKIE_DOMAIN", "") or None
+REFRESH_COOKIE_NAME = "myrobo_refresh"
 
 STATIC_URL = "/static/"
 STATIC_ROOT = "/app/static"
