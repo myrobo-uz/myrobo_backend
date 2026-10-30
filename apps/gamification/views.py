@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.pagination import StandardPagination
+from apps.core.utils import get_avatar_url
 from apps.users.models import User
 
 from .models import Certificate, Rank
@@ -103,6 +104,7 @@ class LeaderboardView(APIView):
                 "position": position,
                 "user_id": user.id,
                 "full_name": user.full_name,
+                "avatar": get_avatar_url(user, request),
                 "xp": user.xp,
                 "rank_title": rank.title if rank else None,
             })

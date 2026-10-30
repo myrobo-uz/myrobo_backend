@@ -84,7 +84,7 @@ class CompetitionJoinAPIView(APIView):
                 status=http_status.HTTP_400_BAD_REQUEST,
             )
         return Response(
-            CompetitionParticipantSerializer(participant).data,
+            CompetitionParticipantSerializer(participant, context={"request": request}).data,
             status=http_status.HTTP_201_CREATED,
         )
 

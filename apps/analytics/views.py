@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.pagination import StandardPagination
+from apps.core.utils import get_avatar_url
 from apps.courses.models import Course, CourseSubscription, LessonProgress, UserCoursePurchase, UserSubscription
 from apps.courses.permission import IsAdminUser
 from apps.payment.models import PaymeTransaction
@@ -291,6 +292,7 @@ class CourseProgressDetailView(AnalyticsBaseView):
                 "user_id": user_id,
                 "full_name": user.full_name,
                 "phone_number": user.phone_number,
+                "avatar": get_avatar_url(user, request),
                 **progress,
             })
 
@@ -303,8 +305,17 @@ class CourseProgressDetailView(AnalyticsBaseView):
 class OnlineUsersView(AnalyticsBaseView):
     def get(self, request):
         online_ids = get_online_user_ids()
-        users = list(User.objects.filter(id__in=online_ids).values("id", "full_name", "phone_number"))
-        serializer = OnlineUserSerializer(users, many=True)
+        users = User.objects.filter(id__in=online_ids)
+        data = [
+            {
+                "id": user.id,
+                "full_name": user.full_name,
+                "phone_number": user.phone_number,
+                "avatar": get_avatar_url(user, request),
+            }
+            for user in users
+        ]
+        serializer = OnlineUserSerializer(data, many=True)
         return Response({"count": len(online_ids), "users": serializer.data})
 
 
@@ -457,6 +468,7 @@ class UserActivitySummaryView(AnalyticsBaseView):
             "user_id": user.id,
             "full_name": user.full_name,
             "phone_number": user.phone_number,
+            "avatar": get_avatar_url(user, request),
             "is_online": str(user.id) in online_ids,
             "login_count": action_counts.get(ActivityType.LOGIN, 0),
             "last_login": last_login,
@@ -606,7 +618,10 @@ class ActionCreateView(APIView):
         serializer = ActionCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         activity = serializer.save()
-        return Response(UserActivitySerializer(activity).data, status=status.HTTP_201_CREATED)
+        return Response(
+            UserActivitySerializer(activity, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 @extend_schema(
@@ -627,4 +642,7 @@ class PageExitCreateView(APIView):
         serializer = PageExitCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         page_exit = serializer.save()
-        return Response(PageExitSerializer(page_exit).data, status=status.HTTP_201_CREATED)
+        return Response(
+            PageExitSerializer(page_exit, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )

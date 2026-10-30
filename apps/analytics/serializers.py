@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.core.utils import get_avatar_url
 from apps.payment.models import PaymeTransaction
 
 from .models import ExitReason, PageExit, UserActivity
@@ -9,26 +10,32 @@ from .utils import get_client_ip
 class DonationSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
     user_telegram_id = serializers.IntegerField(source="user.telegram_id", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     amount_som = serializers.SerializerMethodField()
 
     class Meta:
         model = PaymeTransaction
-        fields = ["id", "user", "user_name", "user_telegram_id", "amount_som", "created_at"]
+        fields = ["id", "user", "user_name", "user_telegram_id", "user_avatar", "amount_som", "created_at"]
 
     def get_amount_som(self, obj):
         return obj.amount_som()
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
 
 class OnlineUserSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     full_name = serializers.CharField()
     phone_number = serializers.CharField()
+    avatar = serializers.CharField(allow_null=True)
 
 
 class CourseStudentProgressSerializer(serializers.Serializer):
     user_id = serializers.UUIDField()
     full_name = serializers.CharField()
     phone_number = serializers.CharField()
+    avatar = serializers.CharField(allow_null=True)
     completed_lessons = serializers.IntegerField()
     total_lessons = serializers.IntegerField()
     percent = serializers.FloatField()
@@ -56,12 +63,13 @@ class PeriodDonationSerializer(serializers.Serializer):
 class UserActivitySerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     user_phone = serializers.SerializerMethodField()
+    user_avatar = serializers.SerializerMethodField()
     action_display = serializers.CharField(source="get_action_display", read_only=True)
 
     class Meta:
         model = UserActivity
         fields = [
-            "id", "user", "user_name", "user_phone", "anonymous_id", "action", "action_display",
+            "id", "user", "user_name", "user_phone", "user_avatar", "anonymous_id", "action", "action_display",
             "description", "page", "path", "target_type", "target_id", "meta", "ip", "created_at",
         ]
 
@@ -70,6 +78,9 @@ class UserActivitySerializer(serializers.ModelSerializer):
 
     def get_user_phone(self, obj):
         return obj.user.phone_number if obj.user_id else None
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request")) if obj.user_id else None
 
 
 class ActivityFilterOptionSerializer(serializers.Serializer):
@@ -87,6 +98,7 @@ class UserActivitySummarySerializer(serializers.Serializer):
     user_id = serializers.UUIDField()
     full_name = serializers.CharField()
     phone_number = serializers.CharField()
+    avatar = serializers.CharField(allow_null=True)
     is_online = serializers.BooleanField()
     login_count = serializers.IntegerField()
     last_login = serializers.DateTimeField(allow_null=True)
@@ -145,12 +157,13 @@ class ActionCreateSerializer(serializers.Serializer):
 class PageExitSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     user_phone = serializers.SerializerMethodField()
+    user_avatar = serializers.SerializerMethodField()
     exit_reason_display = serializers.CharField(source="get_exit_reason_display", read_only=True)
 
     class Meta:
         model = PageExit
         fields = [
-            "id", "user", "user_name", "user_phone", "anonymous_id",
+            "id", "user", "user_name", "user_phone", "user_avatar", "anonymous_id",
             "page", "path", "exit_reason", "exit_reason_display",
             "time_spent", "ip", "created_at",
         ]
@@ -160,6 +173,9 @@ class PageExitSerializer(serializers.ModelSerializer):
 
     def get_user_phone(self, obj):
         return obj.user.phone_number if obj.user_id else None
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request")) if obj.user_id else None
 
 
 class PageExitCreateSerializer(serializers.Serializer):

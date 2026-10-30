@@ -4,22 +4,27 @@ from rest_framework import serializers
 from apps.core.models import Tag
 from apps.core.pagination import StandardPagination
 from apps.core.serializers import TagSerializer
+from apps.core.utils import get_avatar_url
 
-from .models import CommentLike, Topic, TopicComment, TopicLike
+from .models import CommentLike, Topic, TopicComment
 
 
 class TopicCommentSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     likes_count = serializers.IntegerField(read_only=True, default=0)
     is_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = TopicComment
         fields = [
-            "id", "topic", "user", "user_name", "text",
+            "id", "topic", "user", "user_name", "user_avatar", "text",
             "is_accepted", "likes_count", "is_liked", "created_at",
         ]
         read_only_fields = ["id", "topic", "user", "is_accepted", "created_at"]
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
     def get_is_liked(self, obj):
         request = self.context.get("request")
@@ -42,32 +47,42 @@ class TopicCommentCreateSerializer(serializers.ModelSerializer):
 class TopicListSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     comments_count = serializers.IntegerField(read_only=True, default=0)
     likes_count = serializers.IntegerField(read_only=True, default=0)
+    is_liked = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = Topic
         fields = [
             "id", "title", "slug", "tags", "is_solved", "views",
-            "user", "user_name", "comments_count", "likes_count", "created_at",
+            "user", "user_name", "user_avatar", "comments_count", "likes_count",
+            "is_liked", "created_at",
         ]
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
 
 class TopicDetailSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     comments = serializers.SerializerMethodField()
     likes_count = serializers.IntegerField(read_only=True, default=0)
-    is_liked = serializers.SerializerMethodField()
+    is_liked = serializers.BooleanField(read_only=True, default=False)
     is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Topic
         fields = [
             "id", "title", "slug", "description", "tags", "is_solved", "views",
-            "user", "user_name", "comments", "likes_count", "is_liked",
+            "user", "user_name", "user_avatar", "comments", "likes_count", "is_liked",
             "is_owner", "created_at",
         ]
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
     def get_comments(self, obj):
         request = self.context.get("request")
@@ -81,15 +96,6 @@ class TopicDetailSerializer(serializers.ModelSerializer):
         page = paginator.paginate_queryset(comments, request)
         serializer = TopicCommentSerializer(page, many=True, context=self.context)
         return paginator.get_paginated_response(serializer.data).data
-
-    def get_likes_count(self, obj):
-        return obj.likes.count()
-
-    def get_is_liked(self, obj):
-        request = self.context.get("request")
-        if not request or not request.user.is_authenticated:
-            return False
-        return TopicLike.objects.filter(topic=obj, user=request.user).exists()
 
     def get_is_owner(self, obj):
         request = self.context.get("request")

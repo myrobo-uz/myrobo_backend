@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from apps.articles.models import ArticleType, Articles, Comment
 from apps.core.models import Tag
+from apps.core.utils import get_avatar_url
 from apps.community.models import Topic, TopicComment
 from apps.competitions.models import Competition, CompetitionParticipant
 from apps.gamification.models import Certificate, Rank, XPLog
@@ -168,6 +169,7 @@ class AdminArticleSerializer(serializers.ModelSerializer):
 
 class AdminCommentSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     article_slug = serializers.CharField(source="article.slug", read_only=True)
     article_title = serializers.CharField(source="article.title", read_only=True)
 
@@ -175,9 +177,12 @@ class AdminCommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = [
             "id", "article", "article_slug", "article_title",
-            "user", "user_name", "text", "is_active", "created_at",
+            "user", "user_name", "user_avatar", "text", "is_active", "created_at",
         ]
         read_only_fields = ["id", "user", "article_slug", "article_title", "user_name", "created_at"]
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
 
 # ── Companies ──────────────────────────────────────────────────────────────────
@@ -229,6 +234,7 @@ class AdminCoursePlanSerializer(serializers.ModelSerializer):
 class AdminSubscriptionSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
     user_telegram_id = serializers.IntegerField(source="user.telegram_id", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     plan_title = serializers.CharField(source="plan.title", read_only=True)
     promo_code_str = serializers.CharField(source="promo_code.code", read_only=True, allow_null=True)
     is_valid = serializers.BooleanField(read_only=True)
@@ -236,12 +242,15 @@ class AdminSubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserSubscription
         fields = [
-            "id", "user", "user_name", "user_telegram_id",
+            "id", "user", "user_name", "user_telegram_id", "user_avatar",
             "plan", "plan_title", "promo_code", "promo_code_str",
             "original_price", "final_price",
             "subscribed_at", "expires_at", "is_active", "is_valid",
         ]
         read_only_fields = ["id", "subscribed_at"]
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
 
 # ── Purchases ──────────────────────────────────────────────────────────────────
@@ -249,17 +258,21 @@ class AdminSubscriptionSerializer(serializers.ModelSerializer):
 class AdminPurchaseSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
     user_telegram_id = serializers.IntegerField(source="user.telegram_id", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     course_title = serializers.CharField(source="course.title", read_only=True)
     promo_code_str = serializers.CharField(source="promo_code.code", read_only=True, allow_null=True)
 
     class Meta:
         model = UserCoursePurchase
         fields = [
-            "id", "user", "user_name", "user_telegram_id",
+            "id", "user", "user_name", "user_telegram_id", "user_avatar",
             "course", "course_title", "promo_code", "promo_code_str",
             "original_price", "final_price", "purchased_at",
         ]
         read_only_fields = ["id", "purchased_at"]
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
 
 # ── Payment Transactions ───────────────────────────────────────────────────────
@@ -267,6 +280,7 @@ class AdminPurchaseSerializer(serializers.ModelSerializer):
 class AdminTransactionSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
     user_telegram_id = serializers.IntegerField(source="user.telegram_id", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     amount_som = serializers.SerializerMethodField()
     state_display = serializers.CharField(source="get_state_display", read_only=True)
     purpose_display = serializers.CharField(source="get_purpose_display", read_only=True)
@@ -275,7 +289,7 @@ class AdminTransactionSerializer(serializers.ModelSerializer):
         model = PaymeTransaction
         fields = [
             "id", "provider", "purpose", "purpose_display", "user", "user_name", "user_telegram_id",
-            "payme_transaction_id", "amount_tiyin", "amount_som",
+            "user_avatar", "payme_transaction_id", "amount_tiyin", "amount_som",
             "state", "state_display",
             "create_time", "perform_time", "cancel_time",
             "reason", "created_at", "updated_at",
@@ -284,6 +298,9 @@ class AdminTransactionSerializer(serializers.ModelSerializer):
 
     def get_amount_som(self, obj):
         return obj.amount_som()
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
 
 # ── Lesson Tests ───────────────────────────────────────────────────────────────
@@ -323,18 +340,22 @@ class AdminLessonTestSerializer(serializers.ModelSerializer):
 class AdminTestResultSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
     user_telegram_id = serializers.IntegerField(source="user.telegram_id", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     test_title = serializers.CharField(source="test.title", read_only=True)
     lesson_title = serializers.CharField(source="test.lesson.title", read_only=True)
 
     class Meta:
         model = TestResult
         fields = [
-            "id", "user", "user_name", "user_telegram_id",
+            "id", "user", "user_name", "user_telegram_id", "user_avatar",
             "test", "test_title", "lesson_title",
             "total_questions", "correct_count", "incorrect_count",
             "unanswered_count", "score_percent", "is_passed", "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
 
 # ── Tags ───────────────────────────────────────────────────────────────────────
@@ -360,42 +381,54 @@ class AdminRankSerializer(serializers.ModelSerializer):
 
 class AdminXPLogSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     reason_display = serializers.CharField(source="get_reason_display", read_only=True)
 
     class Meta:
         model = XPLog
         fields = [
-            "id", "user", "user_name", "amount", "reason", "reason_display",
+            "id", "user", "user_name", "user_avatar", "amount", "reason", "reason_display",
             "description", "target_type", "target_id", "created_at",
         ]
         read_only_fields = ["id", "created_at"]
 
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
+
 
 class AdminCertificateSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     course_title = serializers.CharField(source="course.title", read_only=True)
 
     class Meta:
         model = Certificate
         fields = [
-            "id", "user", "user_name", "course", "course_title",
+            "id", "user", "user_name", "user_avatar", "course", "course_title",
             "certificate_number", "created_at",
         ]
         read_only_fields = ["id", "certificate_number", "created_at"]
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
 
 # ── Projects ───────────────────────────────────────────────────────────────────
 
 class AdminProjectSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         fields = [
-            "id", "user", "user_name", "title", "slug", "description", "image",
+            "id", "user", "user_name", "user_avatar", "title", "slug", "description", "image",
             "tags", "status", "simulator_ref", "views", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "user", "user_name", "slug", "views", "created_at", "updated_at"]
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
 
 # ── Competitions ───────────────────────────────────────────────────────────────
@@ -416,43 +449,55 @@ class AdminCompetitionSerializer(serializers.ModelSerializer):
 
 class AdminCompetitionParticipantSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     competition_title = serializers.CharField(source="competition.title", read_only=True)
 
     class Meta:
         model = CompetitionParticipant
         fields = [
-            "id", "competition", "competition_title", "user", "user_name",
+            "id", "competition", "competition_title", "user", "user_name", "user_avatar",
             "status", "submission_note", "xp_awarded", "created_at",
         ]
         read_only_fields = ["id", "competition", "user", "xp_awarded", "created_at"]
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
 
 # ── Community ──────────────────────────────────────────────────────────────────
 
 class AdminTopicSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     comments_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Topic
         fields = [
-            "id", "user", "user_name", "title", "slug", "description", "tags",
+            "id", "user", "user_name", "user_avatar", "title", "slug", "description", "tags",
             "is_solved", "is_active", "views", "comments_count", "created_at",
         ]
         read_only_fields = ["id", "user", "user_name", "slug", "views", "created_at"]
 
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
+
 
 class AdminTopicCommentSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_avatar = serializers.SerializerMethodField()
     topic_title = serializers.CharField(source="topic.title", read_only=True)
 
     class Meta:
         model = TopicComment
         fields = [
-            "id", "topic", "topic_title", "user", "user_name",
+            "id", "topic", "topic_title", "user", "user_name", "user_avatar",
             "text", "is_accepted", "is_active", "created_at",
         ]
         read_only_fields = ["id", "topic", "user", "created_at"]
+
+    def get_user_avatar(self, obj):
+        return get_avatar_url(obj.user, self.context.get("request"))
 
 
 # ── Dashboard ──────────────────────────────────────────────────────────────────

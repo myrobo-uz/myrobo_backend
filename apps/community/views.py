@@ -1,5 +1,5 @@
 from django.core.cache import cache
-from django.db.models import Count, Q
+from django.db.models import BooleanField, Count, Exists, OuterRef, Q, Value
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status
@@ -21,11 +21,16 @@ from .serializers import (
 )
 
 
-def _base_queryset():
-    return Topic.objects.filter(is_active=True).select_related("user").prefetch_related("tags").annotate(
+def _base_queryset(user=None):
+    qs = Topic.objects.filter(is_active=True).select_related("user").prefetch_related("tags").annotate(
         comments_count=Count("comments", filter=Q(comments__is_active=True), distinct=True),
         likes_count=Count("likes", distinct=True),
     )
+    if user is not None and user.is_authenticated:
+        qs = qs.annotate(is_liked=Exists(TopicLike.objects.filter(topic=OuterRef("pk"), user=user)))
+    else:
+        qs = qs.annotate(is_liked=Value(False, output_field=BooleanField()))
+    return qs
 
 
 @extend_schema(
@@ -44,7 +49,7 @@ class TopicListAPIView(ListAPIView):
     pagination_class = StandardPagination
 
     def get_queryset(self):
-        qs = _base_queryset()
+        qs = _base_queryset(self.request.user)
         params = self.request.query_params
 
         search = params.get("search")
@@ -71,7 +76,7 @@ class MyTopicsListAPIView(ListAPIView):
     pagination_class = StandardPagination
 
     def get_queryset(self):
-        return _base_queryset().filter(user=self.request.user).order_by("-created_at")
+        return _base_queryset(self.request.user).filter(user=self.request.user).order_by("-created_at")
 
 
 @extend_schema(tags=["Community"], summary="Yangi mavzu yaratish", request=TopicWriteSerializer)
@@ -85,7 +90,7 @@ class TopicDetailAPIView(APIView):
     permission_classes = [IsOwnerOrReadOnly]
 
     def get_object(self, slug):
-        obj = get_object_or_404(_base_queryset(), slug=slug)
+        obj = get_object_or_404(_base_queryset(self.request.user), slug=slug)
         self.check_object_permissions(self.request, obj)
         return obj
 

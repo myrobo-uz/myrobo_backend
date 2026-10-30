@@ -95,7 +95,7 @@ class ProjectDetailAPIView(APIView):
                 request.user, ActivityType.OTHER, request=request,
                 description=f"Loyiha ko'rish: {project.title}", target=project,
             )
-        return Response(ProjectDetailSerializer(project).data)
+        return Response(ProjectDetailSerializer(project, context={"request": request}).data)
 
     def patch(self, request, slug):
         project = self.get_object(slug)
@@ -110,7 +110,7 @@ class ProjectDetailAPIView(APIView):
                 description=project.title, target=project,
             )
 
-        return Response(ProjectDetailSerializer(project).data)
+        return Response(ProjectDetailSerializer(project, context={"request": request}).data)
 
     def delete(self, request, slug):
         project = self.get_object(slug)

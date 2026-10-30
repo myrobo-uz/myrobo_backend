@@ -17,6 +17,15 @@ class SlugMixin:
         return slug
 
 
+def get_avatar_url(user, request=None):
+    if not user or not getattr(user, "avatar", None):
+        return None
+    try:
+        return request.build_absolute_uri(user.avatar.url) if request else user.avatar.url
+    except Exception:
+        return None
+
+
 def kinescope_to_embed(url: str):
     if not url:
         return None
