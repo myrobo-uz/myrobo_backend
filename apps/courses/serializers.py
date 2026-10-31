@@ -223,11 +223,22 @@ class CourseShortDetailSerializer(serializers.ModelSerializer):
 
 class UserCoursePurchaseSerializer(serializers.ModelSerializer):
     course = CourseShortDetailSerializer(read_only=True)
+    percent = serializers.SerializerMethodField()
 
     class Meta:
         model = UserCoursePurchase
-        fields = ["id", "user", "course", "promo_code", "original_price", "final_price", "purchased_at"]
+        fields = [
+            "id", "user", "course", "promo_code", "original_price", "final_price",
+            "percent", "purchased_at",
+        ]
         read_only_fields = ["purchased_at"]
+
+    def get_percent(self, obj):
+        total = getattr(obj, "total_lessons", None)
+        completed = getattr(obj, "completed_lessons", None)
+        if total is None or completed is None:
+            return 0.0
+        return round((completed / total) * 100, 2) if total > 0 else 0.0
 
 
 class CodeSubmissionSerializer(serializers.Serializer):

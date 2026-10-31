@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from django.core.cache import cache
 from django.db import connections, transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
@@ -344,8 +344,20 @@ class UserCoursePurchasesListAPIView(ListAPIView):
 
     def get_queryset(self):
         user_id = self.request.auth.payload.get("user_id")
-        return UserCoursePurchase.objects.filter(user_id=user_id).select_related(
-            "course", "promo_code"
+        return (
+            UserCoursePurchase.objects.filter(user_id=user_id)
+            .select_related("course", "promo_code")
+            .annotate(
+                total_lessons=Count("course__modules__lessons", distinct=True),
+                completed_lessons=Count(
+                    "course__modules__lessons__progress",
+                    filter=Q(
+                        course__modules__lessons__progress__user_id=user_id,
+                        course__modules__lessons__progress__is_completed=True,
+                    ),
+                    distinct=True,
+                ),
+            )
         )
 
 
