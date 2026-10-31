@@ -110,3 +110,55 @@ class ProjectAPITests(APITestCase):
         response = self.client.get("/projects/my/")
         titles = [p["title"] for p in response.data["results"]]
         self.assertEqual(titles, ["Meniki"])
+
+    def test_simulator_fields_can_be_saved_and_read_back(self):
+        self._auth(self.owner_token)
+        payload = {
+            "title": "Simulyator loyihasi",
+            "board_type": "arduino-uno",
+            "code": "void setup() {}\nvoid loop() {}",
+            "components_json": '[{"id":"led1","type":"led"}]',
+            "wires_json": '[{"from":"d13","to":"led1"}]',
+            "files": [{"name": "sketch.ino", "content": "void setup(){}"}],
+        }
+        response = self.client.post("/projects/create/", payload, format="json")
+        self.assertEqual(response.status_code, 201)
+        project = Project.objects.get(id=response.data["id"])
+        self.assertEqual(project.board_type, "arduino-uno")
+        self.assertEqual(project.files, [{"name": "sketch.ino", "content": "void setup(){}"}])
+        self.assertTrue(project.is_public)
+
+        detail = self.client.get(f"/projects/{project.slug}/")
+        self.assertEqual(detail.data["board_type"], "arduino-uno")
+        self.assertEqual(detail.data["files"], [{"name": "sketch.ino", "content": "void setup(){}"}])
+        self.assertEqual(detail.data["components_json"], payload["components_json"])
+
+    def test_invalid_files_format_is_rejected(self):
+        self._auth(self.owner_token)
+        response = self.client.post(
+            "/projects/create/",
+            {"title": "Noto'g'ri files", "files": [{"name": "sketch.ino"}]},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("files", response.data)
+
+    def test_private_project_hidden_from_public_list_and_other_users(self):
+        private = Project.objects.create(
+            user=self.owner, title="Shaxsiy loyiha", status=ProjectStatus.ACTIVE, is_public=False,
+        )
+
+        anon_response = self.client.get("/projects/")
+        self.assertNotIn("Shaxsiy loyiha", [p["title"] for p in anon_response.data["results"]])
+
+        self._auth(self.other_token)
+        other_list = self.client.get("/projects/")
+        self.assertNotIn("Shaxsiy loyiha", [p["title"] for p in other_list.data["results"]])
+        other_detail = self.client.get(f"/projects/{private.slug}/")
+        self.assertEqual(other_detail.status_code, 404)
+
+        self._auth(self.owner_token)
+        owner_list = self.client.get("/projects/")
+        self.assertIn("Shaxsiy loyiha", [p["title"] for p in owner_list.data["results"]])
+        owner_detail = self.client.get(f"/projects/{private.slug}/")
+        self.assertEqual(owner_detail.status_code, 200)

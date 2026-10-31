@@ -1,5 +1,6 @@
 from django.core.cache import cache
 from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status
@@ -35,6 +36,11 @@ class ProjectListAPIView(ListAPIView):
 
     def get_queryset(self):
         qs = Project.objects.exclude(status=ProjectStatus.ARCHIVED).select_related("user").prefetch_related("tags")
+        user = self.request.user
+        if user.is_authenticated:
+            qs = qs.filter(Q(is_public=True) | Q(user=user))
+        else:
+            qs = qs.filter(is_public=True)
         params = self.request.query_params
 
         search = params.get("search")
@@ -74,6 +80,9 @@ class ProjectDetailAPIView(APIView):
 
     def get_object(self, slug):
         obj = get_object_or_404(Project, slug=slug)
+        is_owner = self.request.user.is_authenticated and obj.user_id == self.request.user.id
+        if not obj.is_public and not is_owner:
+            raise Http404
         self.check_object_permissions(self.request, obj)
         return obj
 

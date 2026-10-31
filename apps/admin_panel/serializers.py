@@ -423,7 +423,8 @@ class AdminProjectSerializer(serializers.ModelSerializer):
         model = Project
         fields = [
             "id", "user", "user_name", "user_avatar", "title", "slug", "description", "image",
-            "tags", "status", "simulator_ref", "views", "created_at", "updated_at",
+            "tags", "status", "simulator_ref", "board_type", "code", "components_json",
+            "wires_json", "files", "is_public", "views", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "user", "user_name", "slug", "views", "created_at", "updated_at"]
 

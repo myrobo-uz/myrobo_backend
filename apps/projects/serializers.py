@@ -15,7 +15,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = [
-            "id", "title", "slug", "image", "tags", "status",
+            "id", "title", "slug", "image", "tags", "status", "board_type", "is_public",
             "views", "user", "user_name", "user_avatar", "created_at",
         ]
 
@@ -32,7 +32,9 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
         model = Project
         fields = [
             "id", "title", "slug", "description", "image", "tags", "status",
-            "simulator_ref", "views", "user", "user_name", "user_avatar", "created_at", "updated_at",
+            "simulator_ref", "board_type", "code", "components_json", "wires_json",
+            "files", "is_public", "views", "user", "user_name", "user_avatar",
+            "created_at", "updated_at",
         ]
         read_only_fields = ["id", "slug", "views", "user", "created_at", "updated_at"]
 
@@ -45,8 +47,21 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ["id", "slug", "title", "description", "image", "tags", "status", "simulator_ref"]
+        fields = [
+            "id", "slug", "title", "description", "image", "tags", "status", "simulator_ref",
+            "board_type", "code", "components_json", "wires_json", "files", "is_public",
+        ]
         read_only_fields = ["id", "slug"]
+
+    def validate_files(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError("files ro'yxat (list) bo'lishi kerak.")
+        for item in value:
+            if not isinstance(item, dict) or "name" not in item or "content" not in item:
+                raise serializers.ValidationError(
+                    'Har bir fayl {"name": ..., "content": ...} ko\'rinishida bo\'lishi kerak.'
+                )
+        return value
 
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user

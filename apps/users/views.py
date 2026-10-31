@@ -49,6 +49,11 @@ def _user_payload(user, request=None):
     }
 
 
+def _check_bot_secret(request) -> bool:
+    secret = settings.BOT_API_SECRET
+    return bool(secret) and request.headers.get("X-Bot-Secret") == secret
+
+
 @extend_schema(
     tags=["Auth"],
     summary="Telegram user mavjudligini tekshirish",
@@ -79,6 +84,9 @@ class BotGenerateCodeView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        if not _check_bot_secret(request):
+            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
         telegram_id = request.data.get("telegram_id")
         if not telegram_id:
             return Response({"detail": "telegram_id kerak"}, status=400)
@@ -121,6 +129,9 @@ class SaveTelegramDataView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
+        if not _check_bot_secret(request):
+            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
         telegram_id = request.data.get("telegram_id")
         full_name = request.data.get("full_name")
         phone_number = request.data.get("phone_number")
@@ -268,6 +279,9 @@ class GetUserDataView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        if not _check_bot_secret(request):
+            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
         telegram_id = request.query_params.get("telegram_id")
         if not telegram_id:
             return Response({"error": "telegram_id parameter required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -314,8 +328,7 @@ class AllTelegramIdsView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        secret = settings.BOT_API_SECRET
-        if not secret or request.headers.get("X-Bot-Secret") != secret:
+        if not _check_bot_secret(request):
             return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
         ids = list(
             User.objects.filter(telegram_id__isnull=False).values_list("telegram_id", flat=True)

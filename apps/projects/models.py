@@ -25,6 +25,17 @@ class Project(BaseModel, SlugMixin):
         max_length=255, blank=True,
         help_text="Simulyatordagi tegishli loyiha identifikatori/havolasi",
     )
+    board_type = models.CharField(
+        max_length=64, blank=True, default="", help_text="masalan arduino-uno",
+    )
+    code = models.TextField(blank=True, default="", help_text="Asosiy .ino kodi")
+    components_json = models.TextField(blank=True, default="", help_text="Diagramma komponentlari (JSON-matn)")
+    wires_json = models.TextField(blank=True, default="", help_text="Simlar (JSON-matn)")
+    files = models.JSONField(
+        default=list, blank=True,
+        help_text='[{"name": "sketch.ino", "content": "..."}]',
+    )
+    is_public = models.BooleanField(default=True, help_text="Ochiq yoki shaxsiy")
     views = models.BigIntegerField(default=0)
 
     class Meta:
