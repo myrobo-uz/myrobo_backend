@@ -103,6 +103,7 @@ class Lesson(BaseModel, SlugMixin):
     class LessonType(models.TextChoices):
         CONTENT = "content", "Content"
         CODE = "code", "Code"
+        MATERIAL = "material", "Material"
 
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="lessons")
     lesson_type = models.CharField(max_length=10, choices=LessonType.choices)
