@@ -69,7 +69,8 @@ class AdminCourseSerializer(serializers.ModelSerializer):
         model = Course
         fields = [
             "id", "course_type", "course_type_title", "title", "description",
-            "price", "image", "slug", "views", "tags", "is_archived", "created_at", "updated_at",
+            "price", "old_price", "image", "slug", "views", "tags", "is_archived",
+            "created_at", "updated_at",
         ]
         read_only_fields = ["id", "slug", "views", "created_at", "updated_at"]
 

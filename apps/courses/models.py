@@ -31,6 +31,7 @@ class Course(BaseModel, SlugMixin):
     title = models.CharField(max_length=256)
     description = RichTextUploadingField()
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    old_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     image = models.ImageField(upload_to="course/images")
     slug = models.SlugField(unique=True, blank=True)
     views = models.BigIntegerField(default=0)

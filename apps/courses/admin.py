@@ -53,7 +53,7 @@ class CourseTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ("title", "course_type", "price", "slug", "created_at")
+    list_display = ("title", "course_type", "price", "old_price", "slug", "created_at")
     list_filter = ("course_type",)
     search_fields = ("title", "description", "slug")
     prepopulated_fields = {"slug": ("title",)}

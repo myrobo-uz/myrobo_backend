@@ -128,7 +128,10 @@ class CourseListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ["title", "slug", "price", "image", "course_type", "teachers", "enrolled_count", "tags"]
+        fields = [
+            "title", "slug", "price", "old_price", "image", "course_type",
+            "teachers", "enrolled_count", "tags",
+        ]
 
     def get_teachers(self, obj):
         from apps.teachers.serializers import TeacherShortSerializer
@@ -150,7 +153,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = [
-            "id", "title", "description", "price", "image", "slug", "course_type",
+            "id", "title", "description", "price", "old_price", "image", "slug", "course_type",
             "teachers", "modules", "enrolled_count", "tags",
         ]
 
@@ -214,7 +217,9 @@ class CourseShortDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ["id", "title", "description", "price", "image", "slug", "teachers"]
+        fields = [
+            "id", "title", "description", "price", "old_price", "image", "slug", "teachers",
+        ]
 
     def get_teachers(self, obj):
         from apps.teachers.serializers import TeacherShortSerializer
