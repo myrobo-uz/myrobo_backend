@@ -20,6 +20,10 @@ class TestQuestion(BaseModel):
     test = models.ForeignKey(LessonTest, on_delete=models.CASCADE, related_name="questions")
     text = models.TextField(blank=True)
     image = models.ImageField(upload_to="lessontest/questions/", null=True, blank=True)
+    explanation = models.TextField(
+        blank=True, default="",
+        help_text="Noto'g'ri javob tanlanganda ko'rsatiladigan tushuntirish (ixtiyoriy)",
+    )
     order = models.PositiveIntegerField(default=0)
 
     class Meta:

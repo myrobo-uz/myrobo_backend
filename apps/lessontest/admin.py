@@ -12,7 +12,7 @@ class TestOptionInline(admin.TabularInline):
 class TestQuestionInline(admin.StackedInline):
     model = TestQuestion
     extra = 1
-    fields = ["text", "image", "order"]
+    fields = ["text", "image", "explanation", "order"]
     show_change_link = True
 
 

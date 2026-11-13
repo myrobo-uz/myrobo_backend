@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.db import transaction
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -32,6 +33,7 @@ from apps.courses.models import (
     UserCoursePurchase,
 )
 from apps.courses.permission import IsAdminUser
+from apps.lessontest.html_import import HTMLImportError, parse_questions_from_html
 from apps.lessontest.models import LessonTest, TestQuestion, TestOption, TestResult
 from apps.payment.models import PaymeTransaction
 from apps.teachers.models import Teacher
@@ -67,6 +69,7 @@ from .serializers import (
     AdminTagSerializer,
     AdminTestOptionSerializer,
     AdminTestQuestionSerializer,
+    AdminTestQuestionsImportSerializer,
     AdminTestResultSerializer,
     AdminTransactionSerializer,
     AdminUserSerializer,
@@ -845,6 +848,61 @@ class AdminTestQuestionViewSet(AdminReadWriteViewSet):
         if test_id:
             qs = qs.filter(test_id=test_id)
         return qs
+
+    @extend_schema(
+        summary="HTML fayldan savollarni import qilish",
+        description=(
+            "Tanlangan testga (lesson test) HTML fayl ichidagi `const QUESTIONS = [...]` "
+            "massividan savol va variantlarni avtomatik qo'shadi. Mavjud savollar "
+            "o'chirilmaydi — yangilari ularning oxiriga qo'shiladi. HTML/JS kodi "
+            "ishga tushirilmaydi, faqat QUESTIONS ma'lumotlari xavfsiz o'qiladi."
+        ),
+        request={"multipart/form-data": AdminTestQuestionsImportSerializer},
+        responses={201: AdminTestQuestionSerializer(many=True)},
+    )
+    @action(detail=False, methods=["post"], url_path="import-html")
+    def import_html(self, request):
+        serializer = AdminTestQuestionsImportSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        test = serializer.validated_data["test"]
+        html_file = serializer.validated_data["html_file"]
+
+        try:
+            raw_text = html_file.read().decode("utf-8")
+        except UnicodeDecodeError:
+            return Response({"detail": "Fayl UTF-8 formatida bo'lishi kerak."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            parsed_questions = parse_questions_from_html(raw_text)
+        except HTMLImportError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        start_order = test.questions.count()
+        created_ids = []
+        with transaction.atomic():
+            for offset, item in enumerate(parsed_questions):
+                question = TestQuestion.objects.create(
+                    test=test,
+                    text=item["text"],
+                    explanation=item["explanation"],
+                    order=start_order + offset,
+                )
+                TestOption.objects.bulk_create([
+                    TestOption(
+                        question=question,
+                        text=option_text,
+                        is_correct=(i == item["correct_index"]),
+                        order=i,
+                    )
+                    for i, option_text in enumerate(item["options"])
+                ])
+                created_ids.append(question.id)
+
+        created_questions = self.get_queryset().filter(id__in=created_ids)
+        return Response(
+            AdminTestQuestionSerializer(created_questions, many=True, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 # ── Test Options ───────────────────────────────────────────────────────────────

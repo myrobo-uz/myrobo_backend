@@ -55,7 +55,7 @@ class TestQuestionResultSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TestQuestion
-        fields = ["id", "text", "image", "options"]
+        fields = ["id", "text", "image", "explanation", "options"]
 
 
 class TestAnswerDetailSerializer(serializers.ModelSerializer):

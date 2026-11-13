@@ -318,8 +318,18 @@ class AdminTestQuestionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TestQuestion
-        fields = ["id", "test", "text", "image", "order", "options_count", "options", "created_at"]
+        fields = [
+            "id", "test", "text", "image", "explanation",
+            "order", "options_count", "options", "created_at",
+        ]
         read_only_fields = ["id", "created_at"]
+
+
+class AdminTestQuestionsImportSerializer(serializers.Serializer):
+    """`POST /api/admin/test-questions/import-html/` uchun kirish validatsiyasi."""
+
+    test = serializers.PrimaryKeyRelatedField(queryset=LessonTest.objects.all())
+    html_file = serializers.FileField()
 
 
 class AdminLessonTestSerializer(serializers.ModelSerializer):
