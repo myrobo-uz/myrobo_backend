@@ -342,7 +342,7 @@ class AdminLessonTestSerializer(serializers.ModelSerializer):
         model = LessonTest
         fields = [
             "id", "lesson", "lesson_title", "lesson_slug",
-            "title", "description", "duration_minutes", "pass_score",
+            "title", "description", "duration_minutes", "pass_score", "file",
             "questions_count", "created_at",
         ]
         read_only_fields = ["id", "created_at"]

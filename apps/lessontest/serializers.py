@@ -23,7 +23,10 @@ class LessonTestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LessonTest
-        fields = ["id", "title", "description", "duration_minutes", "pass_score", "questions_count", "questions"]
+        fields = [
+            "id", "title", "description", "duration_minutes", "pass_score",
+            "file", "questions_count", "questions",
+        ]
 
 
 # --- Submit ---

@@ -53,7 +53,7 @@ class LessonTestDetailView(APIView):
         test = get_object_or_404(
             LessonTest.objects.prefetch_related("questions__options"), lesson=lesson
         )
-        serializer = LessonTestSerializer(test)
+        serializer = LessonTestSerializer(test, context={"request": request})
         return Response(serializer.data)
 
 

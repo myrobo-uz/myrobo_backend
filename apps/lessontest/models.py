@@ -11,6 +11,7 @@ class LessonTest(BaseModel):
     description = models.TextField(blank=True)
     duration_minutes = models.PositiveIntegerField(null=True, blank=True)
     pass_score = models.PositiveIntegerField(default=60, help_text="O'tish uchun minimal foiz")
+    file = models.FileField(upload_to="lessontest/files/", null=True, blank=True)
 
     def __str__(self):
         return f"{self.lesson.title} — {self.title}"
