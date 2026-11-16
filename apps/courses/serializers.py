@@ -8,6 +8,7 @@ from .models import (
     CourseSubscription,
     CourseType,
     Lesson,
+    LessonFile,
     LessonTask,
     Module,
     PromoCode,
@@ -61,8 +62,15 @@ class LessonTaskSerializer(serializers.ModelSerializer):
     def get_test_cases(self, obj):
         visible_test_cases = obj.test_cases.filter(is_hidden=False)
         return TaskTestCaseSerializer(visible_test_cases, many=True).data
+class LessonFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LessonFile
+        fields = ["id", "title", "file_type", "url", "order"]
+
+
 class LessonDetailSerializer(serializers.ModelSerializer):
     tasks = LessonTaskSerializer(many=True, read_only=True)
+    files = LessonFileSerializer(many=True, read_only=True)
     is_completed = serializers.SerializerMethodField()
 
     class Meta:
@@ -74,6 +82,7 @@ class LessonDetailSerializer(serializers.ModelSerializer):
             "video_url",
             "slug",
             "tasks",
+            "files",
             "is_completed",
         ]
 

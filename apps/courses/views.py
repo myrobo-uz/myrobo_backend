@@ -137,7 +137,7 @@ class CourseDetailAPIView(RetrieveAPIView):
 class LessonDetailAPIView(RetrieveAPIView):
     permission_classes = [IsLessonAccessible]
     serializer_class = LessonDetailSerializer
-    queryset = Lesson.objects.prefetch_related("tasks__test_cases")
+    queryset = Lesson.objects.prefetch_related("tasks__test_cases", "files")
     lookup_field = "slug"
 
     def retrieve(self, request, *args, **kwargs):

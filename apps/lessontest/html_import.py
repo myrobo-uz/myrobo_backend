@@ -69,29 +69,30 @@ def parse_questions_from_html(html_text: str) -> list[dict]:
     except json.JSONDecodeError as exc:
         raise HTMLImportError(f"QUESTIONS massivini o'qib bo'lmadi: {exc}") from exc
 
-    if not isinstance(data, list) or not data:
-        raise HTMLImportError("QUESTIONS massivi bo'sh yoki noto'g'ri formatda.")
+    if not isinstance(data, list):
+        raise HTMLImportError("QUESTIONS massivi noto'g'ri formatda.")
 
+    # Har bir savol mazmuni tekshirilmaydi — nima kelsa, shu holicha (eng yaqin
+    # mos keladigan ko'rinishda) saqlanadi; noto'g'ri/yetishmayotgan qiymatlar
+    # xatolik chiqarish o'rniga bo'sh/standart qiymat bilan almashtiriladi.
     questions = []
-    for idx, item in enumerate(data, start=1):
+    for item in data:
         if not isinstance(item, dict):
-            raise HTMLImportError(f"{idx}-savol noto'g'ri formatda.")
+            item = {}
 
         text = item.get("q")
-        options = item.get("o")
-        correct_index = item.get("a")
-        explanation = item.get("e") or ""
+        text = text if isinstance(text, str) else ("" if text is None else str(text))
 
-        if not isinstance(text, str) or not text.strip():
-            raise HTMLImportError(f"{idx}-savolda matn (q) yo'q.")
-        if not isinstance(options, list) or len(options) < 2:
-            raise HTMLImportError(f"{idx}-savolda kamida 2 ta variant (o) bo'lishi kerak.")
-        if not all(isinstance(o, str) and o.strip() for o in options):
-            raise HTMLImportError(f"{idx}-savoldagi variantlar matn bo'lishi kerak.")
+        options = item.get("o")
+        options = options if isinstance(options, list) else []
+        options = [o if isinstance(o, str) else str(o) for o in options]
+
+        correct_index = item.get("a")
         if isinstance(correct_index, bool) or not isinstance(correct_index, int) or not (0 <= correct_index < len(options)):
-            raise HTMLImportError(f"{idx}-savolda to'g'ri javob indeksi (a) noto'g'ri.")
-        if not isinstance(explanation, str):
-            raise HTMLImportError(f"{idx}-savoldagi tushuntirish (e) matn bo'lishi kerak.")
+            correct_index = -1
+
+        explanation = item.get("e")
+        explanation = explanation if isinstance(explanation, str) else ("" if explanation is None else str(explanation))
 
         questions.append({
             "text": text.strip(),

@@ -14,6 +14,7 @@ from apps.courses.models import (
     Course,
     Module,
     Lesson,
+    LessonFile,
     LessonTask,
     TaskTestCase,
     PromoCode,
@@ -99,6 +100,17 @@ class AdminLessonSerializer(serializers.ModelSerializer):
             "description", "video_url", "slug", "order", "created_at",
         ]
         read_only_fields = ["id", "slug", "created_at"]
+
+
+# ── Lesson Files ───────────────────────────────────────────────────────────────
+
+class AdminLessonFileSerializer(serializers.ModelSerializer):
+    lesson_title = serializers.CharField(source="lesson.title", read_only=True)
+
+    class Meta:
+        model = LessonFile
+        fields = ["id", "lesson", "lesson_title", "title", "file_type", "url", "order", "created_at"]
+        read_only_fields = ["id", "created_at"]
 
 
 # ── Lesson Tasks ───────────────────────────────────────────────────────────────

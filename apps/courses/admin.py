@@ -5,6 +5,7 @@ from .models import (
     Course,
     Module,
     Lesson,
+    LessonFile,
     LessonTask,
     TaskTestCase,
     LessonProgress,
@@ -31,6 +32,12 @@ class LessonInline(admin.TabularInline):
     show_change_link = True
     fields = ("order", "title", "lesson_type", "slug")
     ordering = ("order",)
+
+
+class LessonFileInline(admin.TabularInline):
+    model = LessonFile
+    extra = 0
+    fields = ("title", "file_type", "url", "order")
 
 
 class LessonTaskInline(admin.TabularInline):
@@ -83,7 +90,7 @@ class LessonAdmin(admin.ModelAdmin):
     search_fields = ("title", "description", "slug")
     ordering = ("module", "order")
     prepopulated_fields = {"slug": ("title",)}
-    inlines = [LessonTaskInline]
+    inlines = [LessonFileInline, LessonTaskInline]
     list_select_related = ("module",)
 
 

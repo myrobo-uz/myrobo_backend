@@ -126,6 +126,28 @@ class Lesson(BaseModel, SlugMixin):
         return self.title
 
 
+class LessonFileType(models.TextChoices):
+    WORD = "word", "Word"
+    EXCEL = "excel", "Excel"
+    PDF = "pdf", "PDF"
+    IMAGE = "image", "Rasm"
+    TXT = "txt", "Matn (txt)"
+
+
+class LessonFile(BaseModel):
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="files")
+    title = models.CharField(max_length=256)
+    file_type = models.CharField(max_length=10, choices=LessonFileType.choices)
+    url = models.URLField(max_length=1000)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "created_at"]
+
+    def __str__(self):
+        return f"{self.lesson.title} — {self.title}"
+
+
 class LessonProgress(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="lesson_progress")
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="progress")

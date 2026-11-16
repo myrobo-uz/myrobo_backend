@@ -26,6 +26,7 @@ from apps.courses.models import (
     Course,
     Module,
     Lesson,
+    LessonFile,
     LessonTask,
     TaskTestCase,
     PromoCode,
@@ -55,6 +56,7 @@ from .serializers import (
     AdminCourseSerializer,
     AdminCourseTypeSerializer,
     AdminDashboardSerializer,
+    AdminLessonFileSerializer,
     AdminLessonSerializer,
     AdminLessonTaskSerializer,
     AdminLessonTestSerializer,
@@ -535,6 +537,20 @@ class AdminLessonViewSet(AdminReadWriteViewSet):
         lesson_type = self.request.query_params.get("lesson_type")
         if lesson_type:
             qs = qs.filter(lesson_type=lesson_type)
+        return qs
+
+
+# ── Lesson Files ───────────────────────────────────────────────────────────────
+
+@extend_schema(tags=["Admin: Courses"])
+class AdminLessonFileViewSet(AdminReadWriteViewSet):
+    serializer_class = AdminLessonFileSerializer
+
+    def get_queryset(self):
+        qs = LessonFile.objects.select_related("lesson").order_by("lesson", "order", "id")
+        lesson_id = self.request.query_params.get("lesson_id")
+        if lesson_id:
+            qs = qs.filter(lesson_id=lesson_id)
         return qs
 
 
