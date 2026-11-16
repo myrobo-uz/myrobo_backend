@@ -191,11 +191,6 @@ class   PurchaseCourseAPIView(APIView):
 
     @transaction.atomic
     def post(self, request, slug):
-        from .tasks import (
-            send_course_invite_links_task,
-            send_subscription_invite_links_task,
-        )
-
         user_id = request.auth.payload.get("user_id")
         user = User.objects.select_for_update().get(id=user_id)
         course = Course.objects.get(slug=slug)
@@ -235,13 +230,6 @@ class   PurchaseCourseAPIView(APIView):
                 original_price=course.price,
                 final_price=price,
             )
-
-            if user.telegram_id:
-                transaction.on_commit(
-                    lambda: send_course_invite_links_task.delay(
-                        telegram_id=user.telegram_id, course_id=str(course.id)
-                    )
-                )
 
             log_activity(
                 user, ActivityType.COURSE_PURCHASE, request=request,
@@ -302,13 +290,6 @@ class   PurchaseCourseAPIView(APIView):
             expires_at=expires_at,
             is_active=True,
         )
-
-        if user.telegram_id:
-            transaction.on_commit(
-                lambda: send_subscription_invite_links_task.delay(
-                    telegram_id=user.telegram_id, plan_id=str(plan.id)
-                )
-            )
 
         log_activity(
             user, ActivityType.COURSE_PURCHASE, request=request,

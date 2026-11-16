@@ -9,3 +9,4 @@ class CoursesConfig(AppConfig):
             from . import translation  # noqa: F401
         except Exception:
             pass
+        from . import signals  # noqa: F401
