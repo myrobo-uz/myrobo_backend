@@ -158,6 +158,7 @@ class CourseSubscriptionAdmin(admin.ModelAdmin):
         "final_price",
         "is_active",
         "expires_at",
+        "invite_sent_at",
     )
     list_filter = ("is_active", "course")
     search_fields = ("user__username", "course__title")

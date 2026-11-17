@@ -54,6 +54,10 @@ class Course(BaseModel, SlugMixin):
     def user_has_access(self, user):
         if UserCoursePurchase.objects.filter(user=user, course=self).exists():
             return True
+        if CourseSubscription.objects.filter(
+            user=user, course=self, is_active=True, expires_at__gt=timezone.now()
+        ).exists():
+            return True
         active = UserSubscription.objects.filter(
             user=user, is_active=True, expires_at__gt=timezone.now()
         ).values_list("plan_id", flat=True)
@@ -333,6 +337,10 @@ class CourseSubscription(BaseModel):
     started_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     is_active = models.BooleanField(default=True)
+    invite_sent_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Telegram taklif havolasi yuborilgan vaqt (Market yozgan qatorlarda bo'sh keladi)",
+    )
 
     class Meta:
         indexes = [

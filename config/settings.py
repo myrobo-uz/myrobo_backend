@@ -114,6 +114,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.courses.tasks.expire_subscriptions_task",
         "schedule": 1800,
     },
+    "send-pending-course-subscription-invites": {
+        "task": "apps.courses.tasks.send_pending_course_subscription_invites_task",
+        "schedule": 60,
+    },
 }
 
 ROOT_URLCONF = "config.urls"

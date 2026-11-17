@@ -27,6 +27,7 @@ from .models import (
     Company,
     Course,
     CoursePlan,
+    CourseSubscription,
     CourseType,
     Lesson,
     LessonProgress,
@@ -41,6 +42,7 @@ from .permission import IsAdminUser, IsCourseSubscribed, IsLessonAccessible
 from .serializers import (
     CompleteLessonResponseSerializer,
     CourseDetailSerializer,
+    CourseSubscriptionSerializer,
     SubmissionResultSerializer,
     CoursePlanSerializer,
     CourseListSerializer,
@@ -308,7 +310,14 @@ class   PurchaseCourseAPIView(APIView):
         })
 
 
-@extend_schema(tags=["Courses"], summary="Mening obunalarim")
+@extend_schema(
+    tags=["Courses"],
+    summary="Mening obunalarim",
+    description=(
+        "Reja (CoursePlan) asosidagi obunalar VA Market orqali yozilgan "
+        "alohida kurs obunalarini (CourseSubscription) birgalikda qaytaradi."
+    ),
+)
 class UserSubscriptionsListAPIView(ListAPIView):
     serializer_class = UserSubscriptionSerializer
     authentication_classes = [CustomJWTAuthentication]
@@ -316,6 +325,18 @@ class UserSubscriptionsListAPIView(ListAPIView):
     def get_queryset(self):
         user_id = self.request.auth.payload.get("user_id")
         return UserSubscription.objects.filter(user_id=user_id).select_related("plan", "promo_code")
+
+    def list(self, request, *args, **kwargs):
+        user_id = request.auth.payload.get("user_id")
+        plan_subs = self.get_queryset()
+        course_subs = CourseSubscription.objects.filter(user_id=user_id).select_related(
+            "course", "plan", "promo_code"
+        )
+        data = (
+            UserSubscriptionSerializer(plan_subs, many=True).data
+            + CourseSubscriptionSerializer(course_subs, many=True).data
+        )
+        return Response(data)
 
 
 @extend_schema(tags=["Courses"], summary="Mening sotib olgan kurslarim")

@@ -1,7 +1,4 @@
-from django.utils import timezone
 from rest_framework.permissions import BasePermission
-
-from .models import UserCoursePurchase, UserSubscription
 
 
 class IsAdminUser(BasePermission):
@@ -18,16 +15,7 @@ class IsCourseSubscribed(BasePermission):
         user = request.user
         if not user or not user.is_authenticated:
             return False
-
-        if UserCoursePurchase.objects.filter(user=user, course=obj).exists():
-            return True
-
-        return UserSubscription.objects.filter(
-            user=user,
-            is_active=True,
-            expires_at__gt=timezone.now(),
-            plan__courses=obj,
-        ).exists()
+        return obj.user_has_access(user)
 
 
 class IsLessonAccessible(BasePermission):
@@ -35,15 +23,4 @@ class IsLessonAccessible(BasePermission):
         user = request.user
         if not user or not user.is_authenticated:
             return False
-
-        course = obj.module.course
-
-        if UserCoursePurchase.objects.filter(user=user, course=course).exists():
-            return True
-
-        return UserSubscription.objects.filter(
-            user=user,
-            is_active=True,
-            expires_at__gt=timezone.now(),
-            plan__courses=course,
-        ).exists()
+        return obj.module.course.user_has_access(user)

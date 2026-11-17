@@ -22,18 +22,7 @@ from .serializers import (
 
 
 def _check_lesson_access(user, lesson):
-    from django.utils import timezone
-    from apps.courses.models import UserCoursePurchase, UserSubscription
-
-    course = lesson.module.course
-    if UserCoursePurchase.objects.filter(user=user, course=course).exists():
-        return True
-    return UserSubscription.objects.filter(
-        user=user,
-        is_active=True,
-        expires_at__gt=timezone.now(),
-        plan__courses=course,
-    ).exists()
+    return lesson.module.course.user_has_access(user)
 
 
 @extend_schema(tags=["Lesson Test"], summary="Darsga tegishli testni olish")

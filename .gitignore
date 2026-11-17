@@ -13,3 +13,6 @@ __pycache__/
 # Celery
 celerybeat-schedule
 celerybeat.pid
+
+
+.claude

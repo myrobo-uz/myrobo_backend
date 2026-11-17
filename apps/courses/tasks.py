@@ -73,7 +73,47 @@ def expire_subscriptions_task(self):
     if sub_ids:
         UserSubscription.objects.filter(id__in=sub_ids).update(is_active=False)
 
-    return {"processed": total, "kicked": kicked_users, "errors": errors}
+    # Market tomonidan yoziladigan CourseSubscription uchun ham xuddi shunday:
+    # muddati tugaganlarni yopamiz, lekin foydalanuvchida shu kursga boshqa
+    # kirish huquqi (purchase, plan yoki boshqa faol CourseSubscription) qolgan
+    # bo'lsa, chatdan chiqarib yubormaymiz.
+    from .models import CourseSubscription
+
+    expired_course_subs = list(
+        CourseSubscription.objects.filter(is_active=True, expires_at__lte=now)
+        .select_related("user", "course")
+    )
+    cs_ids = [cs.id for cs in expired_course_subs]
+    if cs_ids:
+        CourseSubscription.objects.filter(id__in=cs_ids).update(is_active=False)
+
+    cs_kicked = 0
+    cs_errors = 0
+    for cs in expired_course_subs:
+        try:
+            telegram_id = cs.user.telegram_id
+            if not telegram_id:
+                continue
+            telegram_links = list(
+                CourseTelegramLink.objects.filter(course=cs.course, is_active=True)
+            )
+            if not telegram_links:
+                continue
+            if cs.course.user_has_access(cs.user):
+                continue
+            kick_user_from_course_chats(telegram_id, telegram_links)
+            cs_kicked += 1
+        except Exception:
+            cs_errors += 1
+
+    return {
+        "processed": total,
+        "kicked": kicked_users,
+        "errors": errors,
+        "course_subscriptions_processed": len(cs_ids),
+        "course_subscriptions_kicked": cs_kicked,
+        "course_subscriptions_errors": cs_errors,
+    }
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=30, acks_late=True)
@@ -89,6 +129,34 @@ def send_course_invite_links_task(self, telegram_id: int, course_id: str):
             send_invite_links_to_user(telegram_id, telegram_links)
     except Exception as exc:
         raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
+def send_pending_course_subscription_invites_task(self):
+    """Market CourseSubscription yaratganda Celery'ga to'g'ridan-to'g'ri murojaat
+    qila olmaydi, shuning uchun bu vazifa har daqiqada hali taklif havolasi
+    yuborilmagan (invite_sent_at bo'sh) faol obunalarni topib, mavjud
+    send_course_invite_links_task orqali yuboradi.
+    """
+    from .models import CourseSubscription
+
+    now = timezone.now()
+    pending = list(
+        CourseSubscription.objects.filter(
+            is_active=True, expires_at__gt=now, invite_sent_at__isnull=True,
+        ).select_related("user", "course")
+    )
+
+    sent = 0
+    for cs in pending:
+        CourseSubscription.objects.filter(id=cs.id).update(invite_sent_at=now)
+        if cs.user.telegram_id:
+            send_course_invite_links_task.delay(
+                telegram_id=cs.user.telegram_id, course_id=str(cs.course_id)
+            )
+            sent += 1
+
+    return {"processed": len(pending), "sent": sent}
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=30, acks_late=True)
