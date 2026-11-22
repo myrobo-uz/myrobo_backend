@@ -3,7 +3,6 @@ from .models import (
     Company,
     CourseType,
     Course,
-    CourseResource,
     Module,
     Lesson,
     LessonFile,
@@ -24,13 +23,6 @@ class ModuleInline(admin.TabularInline):
     extra = 0
     show_change_link = True
     fields = ("order", "title", "slug")
-    ordering = ("order",)
-
-
-class CourseResourceInline(admin.TabularInline):
-    model = CourseResource
-    extra = 0
-    fields = ("title", "channel_id", "message_id", "order")
     ordering = ("order",)
 
 
@@ -68,12 +60,12 @@ class CourseTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ("title", "course_type", "price", "old_price", "slug", "is_public", "created_at")
+    list_display = ("title", "course_type", "price", "old_price", "slug", "is_public", "resource_code", "created_at")
     list_filter = ("course_type", "is_public")
     search_fields = ("title", "description", "slug")
     prepopulated_fields = {"slug": ("title",)}
     filter_horizontal = ("tags", "allowed_users")
-    inlines = [CourseResourceInline, ModuleInline]
+    inlines = [ModuleInline]
     list_select_related = ("course_type",)
 
 

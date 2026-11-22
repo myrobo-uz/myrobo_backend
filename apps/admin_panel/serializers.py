@@ -10,7 +10,6 @@ from apps.projects.models import Project
 from apps.courses.models import (
     Company,
     CoursePlan,
-    CourseResource,
     CourseType,
     Course,
     Module,
@@ -81,24 +80,10 @@ class AdminCourseSerializer(serializers.ModelSerializer):
         fields = [
             "id", "course_type", "course_type_title", "title", "description",
             "price", "old_price", "image", "slug", "views", "tags", "is_archived",
-            "is_public", "allowed_users", "allowed_users_detail",
+            "is_public", "allowed_users", "allowed_users_detail", "resource_code",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "slug", "views", "created_at", "updated_at"]
-
-
-# ── Course Resources ───────────────────────────────────────────────────────────
-
-class AdminCourseResourceSerializer(serializers.ModelSerializer):
-    course_title = serializers.CharField(source="course.title", read_only=True)
-
-    class Meta:
-        model = CourseResource
-        fields = [
-            "id", "course", "course_title", "title",
-            "channel_id", "message_id", "order", "created_at",
-        ]
-        read_only_fields = ["id", "created_at"]
 
 
 # ── Modules ────────────────────────────────────────────────────────────────────

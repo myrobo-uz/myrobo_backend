@@ -285,6 +285,7 @@ PAYME_LOGIN = os.environ.get("PAYME_LOGIN", "")
 PAYME_SECRET_KEY = os.environ.get("PAYME_SECRET_KEY", "")
 
 BOT_API_SECRET = os.environ.get("BOT_API_SECRET", "")
+KINO_BOT_USERNAME = os.environ.get("KINO_BOT_USERNAME", "nice_moviesbot")
 CONTACT_GROUP_CHAT_ID = os.environ.get("CONTACT_GROUP_CHAT_ID", "")
 
 SECURE_BROWSER_XSS_FILTER = True

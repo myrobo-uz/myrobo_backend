@@ -3,6 +3,7 @@ import secrets
 import string
 from datetime import timedelta
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db import connections, transaction
 from django.db.models import Count, Q
@@ -27,7 +28,6 @@ from .models import (
     Company,
     Course,
     CoursePlan,
-    CourseResource,
     CourseSubscription,
     CourseType,
     Lesson,
@@ -157,11 +157,11 @@ class LessonDetailAPIView(RetrieveAPIView):
 
 @extend_schema(
     tags=["Courses"],
-    summary="Kurs resurslarini Telegram orqali yuklab olish",
+    summary="Kurs resurslarini yuklab olish uchun Telegram havolasi",
     description=(
         "Darsni ko'rayotgan foydalanuvchi 'Resurslarni yuklash' tugmasini bossa, "
-        "shu kursga oldindan biriktirilgan fayllar foydalanuvchining Telegram "
-        "chatiga bot orqali (fon rejimida) yuboriladi."
+        "resurs botiga (kino_bot) kursning kodi bilan ochiladigan deep-link "
+        "qaytariladi — bot foydalanuvchiga /start <code> orqali o'zi yuboradi."
     ),
     request=None,
 )
@@ -170,9 +170,6 @@ class LessonDownloadResourcesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, lesson_slug):
-        from .tasks import send_course_resources_task
-        from .telegram_service import get_bot_deep_link
-
         lesson = get_object_or_404(Lesson.objects.select_related("module__course"), slug=lesson_slug)
         course = lesson.module.course
 
@@ -180,22 +177,13 @@ class LessonDownloadResourcesAPIView(APIView):
             return Response(
                 {"detail": "Bu kursga kirish huquqingiz yo'q."}, status=status.HTTP_403_FORBIDDEN
             )
-        if not request.user.telegram_id:
-            return Response(
-                {"detail": "Telegram hisobingiz ulanmagan."}, status=status.HTTP_400_BAD_REQUEST
-            )
-        if not CourseResource.objects.filter(course=course).exists():
+        if not course.resource_code:
             return Response(
                 {"detail": "Bu kurs uchun hali resurslar qo'shilmagan."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        send_course_resources_task.delay(
-            telegram_id=request.user.telegram_id, course_id=str(course.id)
-        )
         return Response({
-            "status": "sending",
-            "detail": "Resurslar Telegram botga yuborilmoqda.",
-            "telegram_link": get_bot_deep_link(),
+            "telegram_link": f"https://t.me/{settings.KINO_BOT_USERNAME}?start={course.resource_code}",
         })
 
     def retrieve(self, request, *args, **kwargs):

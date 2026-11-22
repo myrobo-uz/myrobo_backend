@@ -45,6 +45,10 @@ class Course(BaseModel, SlugMixin):
         User, blank=True, related_name="visible_courses",
         help_text="is_public=False bo'lganda shu kursni ko'ra oladigan foydalanuvchilar",
     )
+    resource_code = models.CharField(
+        max_length=32, blank=True, default="",
+        help_text="Resurs boti (kino_bot)dagi kod — masalan 701. /start <code> deep-link uchun ishlatiladi.",
+    )
 
     class Meta:
         ordering = ("-created_at",)
@@ -100,25 +104,6 @@ class CourseTelegramLink(BaseModel):
 
     def __str__(self):
         return f"{self.course.title} → {self.title} ({self.chat_id})"
-
-
-class CourseResource(BaseModel):
-    """Kursga tegishli resurs fayl — maxfiy kanalga oldindan joylangan xabarga
-    ishora qiladi. "Resurslarni yuklash" tugmasi bosilganda bu xabar(lar)
-    Telegram'ning copyMessage usuli orqali foydalanuvchiga nusxalanadi."""
-
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="resources")
-    title = models.CharField(max_length=256, blank=True)
-    channel_id = models.BigIntegerField(help_text="Resurs fayl joylashgan kanal chat_id")
-    message_id = models.BigIntegerField(help_text="Kanaldagi xabar ID'si")
-    order = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        ordering = ["order", "created_at"]
-        unique_together = ("channel_id", "message_id")
-
-    def __str__(self):
-        return f"{self.course.title} → {self.title or self.message_id}"
 
 
 class Module(BaseModel, SlugMixin):

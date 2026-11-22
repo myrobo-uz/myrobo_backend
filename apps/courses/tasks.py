@@ -160,21 +160,6 @@ def send_pending_course_subscription_invites_task(self):
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=30, acks_late=True)
-def send_course_resources_task(self, telegram_id: int, course_id: str):
-    from .models import CourseResource
-    from .telegram_service import send_course_resources_to_user
-
-    try:
-        resources = list(
-            CourseResource.objects.filter(course_id=course_id).order_by("order", "created_at")
-        )
-        if resources:
-            send_course_resources_to_user(telegram_id, resources)
-    except Exception as exc:
-        raise self.retry(exc=exc)
-
-
-@shared_task(bind=True, max_retries=3, default_retry_delay=30, acks_late=True)
 def send_subscription_invite_links_task(self, telegram_id: int, plan_id: str):
     from .models import CoursePlan, CourseTelegramLink
     from .telegram_service import send_invite_links_to_user
