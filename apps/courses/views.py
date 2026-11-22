@@ -6,7 +6,7 @@ from datetime import timedelta
 from django.core.cache import cache
 from django.db import connections, transaction
 from django.db.models import Count, Q
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -27,6 +27,7 @@ from .models import (
     Company,
     Course,
     CoursePlan,
+    CourseResource,
     CourseSubscription,
     CourseType,
     Lesson,
@@ -84,10 +85,15 @@ class CourseListAPIView(ListAPIView):
             .select_related("course_type")
             .prefetch_related("teachers", "tags")
         )
+        user = self.request.user
+        if user.is_authenticated:
+            qs = qs.filter(Q(is_public=True) | Q(allowed_users=user))
+        else:
+            qs = qs.filter(is_public=True)
         tag = self.request.query_params.get("tag")
         if tag:
             qs = qs.filter(tags__slug=tag)
-        return qs
+        return qs.distinct()
 
 
 @extend_schema(tags=["Courses"], summary="Kurs tafsiloti")
@@ -98,6 +104,12 @@ class CourseDetailAPIView(RetrieveAPIView):
         "teachers", "modules__lessons", "tags"
     )
     lookup_field = "slug"
+
+    def get_object(self):
+        course = super().get_object()
+        if not course.is_visible_to(self.request.user):
+            raise Http404
+        return course
 
     def _increment_views(self, course, request):
         if request.user and hasattr(request.user, "id"):
@@ -141,6 +153,50 @@ class LessonDetailAPIView(RetrieveAPIView):
     serializer_class = LessonDetailSerializer
     queryset = Lesson.objects.prefetch_related("tasks__test_cases", "files")
     lookup_field = "slug"
+
+
+@extend_schema(
+    tags=["Courses"],
+    summary="Kurs resurslarini Telegram orqali yuklab olish",
+    description=(
+        "Darsni ko'rayotgan foydalanuvchi 'Resurslarni yuklash' tugmasini bossa, "
+        "shu kursga oldindan biriktirilgan fayllar foydalanuvchining Telegram "
+        "chatiga bot orqali (fon rejimida) yuboriladi."
+    ),
+    request=None,
+)
+class LessonDownloadResourcesAPIView(APIView):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, lesson_slug):
+        from .tasks import send_course_resources_task
+        from .telegram_service import get_bot_deep_link
+
+        lesson = get_object_or_404(Lesson.objects.select_related("module__course"), slug=lesson_slug)
+        course = lesson.module.course
+
+        if not course.user_has_access(request.user):
+            return Response(
+                {"detail": "Bu kursga kirish huquqingiz yo'q."}, status=status.HTTP_403_FORBIDDEN
+            )
+        if not request.user.telegram_id:
+            return Response(
+                {"detail": "Telegram hisobingiz ulanmagan."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        if not CourseResource.objects.filter(course=course).exists():
+            return Response(
+                {"detail": "Bu kurs uchun hali resurslar qo'shilmagan."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        send_course_resources_task.delay(
+            telegram_id=request.user.telegram_id, course_id=str(course.id)
+        )
+        return Response({
+            "status": "sending",
+            "detail": "Resurslar Telegram botga yuborilmoqda.",
+            "telegram_link": get_bot_deep_link(),
+        })
 
     def retrieve(self, request, *args, **kwargs):
         lesson = self.get_object()
@@ -196,6 +252,9 @@ class   PurchaseCourseAPIView(APIView):
         user_id = request.auth.payload.get("user_id")
         user = User.objects.select_for_update().get(id=user_id)
         course = Course.objects.get(slug=slug)
+
+        if not course.is_visible_to(user):
+            raise Http404
 
         purchase_type = request.data.get("purchase_type")
         if purchase_type not in ("course", "subscription"):

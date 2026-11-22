@@ -6,6 +6,7 @@ from .views import (
     AdminUserViewSet,
     AdminCourseTypeViewSet,
     AdminCourseViewSet,
+    AdminCourseResourceViewSet,
     AdminModuleViewSet,
     AdminLessonViewSet,
     AdminLessonFileViewSet,
@@ -44,6 +45,7 @@ router.register("users", AdminUserViewSet, basename="admin-users")
 # Courses
 router.register("course-types", AdminCourseTypeViewSet, basename="admin-course-types")
 router.register("courses", AdminCourseViewSet, basename="admin-courses")
+router.register("course-resources", AdminCourseResourceViewSet, basename="admin-course-resources")
 router.register("modules", AdminModuleViewSet, basename="admin-modules")
 router.register("lessons", AdminLessonViewSet, basename="admin-lessons")
 router.register("lesson-files", AdminLessonFileViewSet, basename="admin-lesson-files")

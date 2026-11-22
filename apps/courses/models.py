@@ -37,6 +37,14 @@ class Course(BaseModel, SlugMixin):
     views = models.BigIntegerField(default=0)
     tags = models.ManyToManyField("core.Tag", blank=True, related_name="courses")
     is_archived = models.BooleanField(default=False)
+    is_public = models.BooleanField(
+        default=True,
+        help_text="True bo'lsa barcha foydalanuvchiga ko'rinadi, False bo'lsa faqat allowed_users'ga",
+    )
+    allowed_users = models.ManyToManyField(
+        User, blank=True, related_name="visible_courses",
+        help_text="is_public=False bo'lganda shu kursni ko'ra oladigan foydalanuvchilar",
+    )
 
     class Meta:
         ordering = ("-created_at",)
@@ -44,12 +52,20 @@ class Course(BaseModel, SlugMixin):
             models.Index(fields=["slug"]),
             models.Index(fields=["course_type"]),
             models.Index(fields=["is_archived"]),
+            models.Index(fields=["is_public"]),
         ]
 
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = self.generate_unique_slug()
         super().save(*args, **kwargs)
+
+    def is_visible_to(self, user):
+        if self.is_public:
+            return True
+        return bool(
+            user and user.is_authenticated and self.allowed_users.filter(id=user.id).exists()
+        )
 
     def user_has_access(self, user):
         if UserCoursePurchase.objects.filter(user=user, course=self).exists():
@@ -84,6 +100,25 @@ class CourseTelegramLink(BaseModel):
 
     def __str__(self):
         return f"{self.course.title} → {self.title} ({self.chat_id})"
+
+
+class CourseResource(BaseModel):
+    """Kursga tegishli resurs fayl — maxfiy kanalga oldindan joylangan xabarga
+    ishora qiladi. "Resurslarni yuklash" tugmasi bosilganda bu xabar(lar)
+    Telegram'ning copyMessage usuli orqali foydalanuvchiga nusxalanadi."""
+
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="resources")
+    title = models.CharField(max_length=256, blank=True)
+    channel_id = models.BigIntegerField(help_text="Resurs fayl joylashgan kanal chat_id")
+    message_id = models.BigIntegerField(help_text="Kanaldagi xabar ID'si")
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "created_at"]
+        unique_together = ("channel_id", "message_id")
+
+    def __str__(self):
+        return f"{self.course.title} → {self.title or self.message_id}"
 
 
 class Module(BaseModel, SlugMixin):

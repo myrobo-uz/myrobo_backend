@@ -22,6 +22,7 @@ from apps.projects.models import Project
 from apps.courses.models import (
     Company,
     CoursePlan,
+    CourseResource,
     CourseType,
     Course,
     Module,
@@ -54,6 +55,7 @@ from .serializers import (
     AdminTopicCommentSerializer,
     AdminCoursePlanSerializer,
     AdminCourseSerializer,
+    AdminCourseResourceSerializer,
     AdminCourseTypeSerializer,
     AdminDashboardSerializer,
     AdminLessonFileSerializer,
@@ -502,6 +504,20 @@ class AdminCourseViewSet(AdminReadWriteViewSet):
         course.is_archived = False
         course.save(update_fields=["is_archived", "updated_at"])
         return Response(AdminCourseSerializer(course).data)
+
+
+# ── Course Resources ───────────────────────────────────────────────────────────
+
+@extend_schema(tags=["Admin: Courses"])
+class AdminCourseResourceViewSet(AdminReadWriteViewSet):
+    serializer_class = AdminCourseResourceSerializer
+
+    def get_queryset(self):
+        qs = CourseResource.objects.select_related("course").order_by("course", "order", "id")
+        course_id = self.request.query_params.get("course_id")
+        if course_id:
+            qs = qs.filter(course_id=course_id)
+        return qs
 
 
 # ── Modules ────────────────────────────────────────────────────────────────────
