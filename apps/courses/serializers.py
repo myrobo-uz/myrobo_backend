@@ -72,6 +72,7 @@ class LessonDetailSerializer(serializers.ModelSerializer):
     tasks = LessonTaskSerializer(many=True, read_only=True)
     files = LessonFileSerializer(many=True, read_only=True)
     is_completed = serializers.SerializerMethodField()
+    telegram_bot_username = serializers.SerializerMethodField()
 
     class Meta:
         model = Lesson
@@ -84,7 +85,13 @@ class LessonDetailSerializer(serializers.ModelSerializer):
             "tasks",
             "files",
             "is_completed",
+            "resource_code",
+            "telegram_bot_username",
         ]
+
+    def get_telegram_bot_username(self, obj):
+        from django.conf import settings
+        return settings.KINO_BOT_USERNAME
 
     def get_is_completed(self, obj):
         request = self.context.get("request")

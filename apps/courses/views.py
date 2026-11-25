@@ -157,46 +157,6 @@ class LessonDetailAPIView(RetrieveAPIView):
 
 @extend_schema(
     tags=["Courses"],
-    summary="Kurs resurslarini yuklab olish uchun Telegram havolasi",
-    description=(
-        "Darsni ko'rayotgan foydalanuvchi 'Resurslarni yuklash' tugmasini bossa, "
-        "resurs botiga (kino_bot) kursning kodi bilan ochiladigan deep-link "
-        "qaytariladi — bot foydalanuvchiga /start <code> orqali o'zi yuboradi."
-    ),
-    request=None,
-)
-class LessonDownloadResourcesAPIView(APIView):
-    authentication_classes = [CustomJWTAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, lesson_slug):
-        lesson = get_object_or_404(Lesson.objects.select_related("module__course"), slug=lesson_slug)
-        course = lesson.module.course
-
-        if not course.user_has_access(request.user):
-            return Response(
-                {"detail": "Bu kursga kirish huquqingiz yo'q."}, status=status.HTTP_403_FORBIDDEN
-            )
-        if not course.resource_code:
-            return Response(
-                {"detail": "Bu kurs uchun hali resurslar qo'shilmagan."}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        return Response({
-            "telegram_link": f"https://t.me/{settings.KINO_BOT_USERNAME}?start={course.resource_code}",
-        })
-
-    def retrieve(self, request, *args, **kwargs):
-        lesson = self.get_object()
-        log_activity(
-            request.user, ActivityType.LESSON_VIEW, request=request,
-            description=lesson.title, target=lesson,
-        )
-        return Response(self.get_serializer(lesson).data)
-
-
-@extend_schema(
-    tags=["Courses"],
     summary="Darsni yakunlash",
     request=None,
     responses={200: CompleteLessonResponseSerializer},

@@ -80,7 +80,7 @@ class AdminCourseSerializer(serializers.ModelSerializer):
         fields = [
             "id", "course_type", "course_type_title", "title", "description",
             "price", "old_price", "image", "slug", "views", "tags", "is_archived",
-            "is_public", "allowed_users", "allowed_users_detail", "resource_code",
+            "is_public", "allowed_users", "allowed_users_detail",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "slug", "views", "created_at", "updated_at"]
@@ -107,7 +107,7 @@ class AdminLessonSerializer(serializers.ModelSerializer):
         model = Lesson
         fields = [
             "id", "module", "module_title", "lesson_type", "title",
-            "description", "video_url", "slug", "order", "created_at",
+            "description", "video_url", "slug", "order", "resource_code", "created_at",
         ]
         read_only_fields = ["id", "slug", "created_at"]
 

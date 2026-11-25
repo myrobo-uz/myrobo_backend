@@ -45,10 +45,6 @@ class Course(BaseModel, SlugMixin):
         User, blank=True, related_name="visible_courses",
         help_text="is_public=False bo'lganda shu kursni ko'ra oladigan foydalanuvchilar",
     )
-    resource_code = models.CharField(
-        max_length=32, blank=True, default="",
-        help_text="Resurs boti (kino_bot)dagi kod — masalan 701. /start <code> deep-link uchun ishlatiladi.",
-    )
 
     class Meta:
         ordering = ("-created_at",)
@@ -137,6 +133,10 @@ class Lesson(BaseModel, SlugMixin):
     video_url = models.CharField(max_length=500, blank=True, null=True)
     slug = models.SlugField(unique=True, blank=True)
     order = models.PositiveIntegerField(default=0)
+    resource_code = models.CharField(
+        max_length=32, blank=True, default="",
+        help_text="Resurs boti (kino_bot)dagi kod — masalan 701. /start <code> deep-link uchun ishlatiladi.",
+    )
 
     class Meta:
         ordering = ("order", "id")

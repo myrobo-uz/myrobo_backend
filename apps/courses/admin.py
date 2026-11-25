@@ -60,7 +60,7 @@ class CourseTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ("title", "course_type", "price", "old_price", "slug", "is_public", "resource_code", "created_at")
+    list_display = ("title", "course_type", "price", "old_price", "slug", "is_public", "created_at")
     list_filter = ("course_type", "is_public")
     search_fields = ("title", "description", "slug")
     prepopulated_fields = {"slug": ("title",)}
@@ -84,7 +84,7 @@ class ModuleAdmin(admin.ModelAdmin):
 
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
-    list_display = ("order", "title", "module", "lesson_type", "slug", "created_at")
+    list_display = ("order", "title", "module", "lesson_type", "slug", "resource_code", "created_at")
     list_display_links = ("title",)
     list_editable = ("order",)
     list_filter = ("lesson_type", "module__course")
